@@ -1,15 +1,24 @@
 use serde::Deserialize;
 
-// This derives the Debug and Deserialize traits for AlpacaMessage, which allows for formatted output
-// via {:?} and deserialization from formats like JSON, respectively.
-//
-// #[serde(tag = "T", rename_all = "lowercase")] tells Serde to use an
-// externally tagged enum design, using the "T" field in the incoming map (e.g., JSON).
-// The value of "T" selects the enum variant, matching lowercase variant names unless explicitly renamed.
-// For example, a JSON object with "T": "b" will deserialize into the Bar variant.
+/*
+  This block derives the Debug and Deserialize traits for AlpacaMessage, which enables formatted output
+  using {:?} and deserialization from formats such as JSON.
+
+  The attribute #[serde(tag = "T", rename_all = "lowercase")] configures Serde to use externally tagged
+  enum representation, keyed by the "T" field in the input map (such as JSON). The value of "T" chooses
+  which enum variant to use, matching the variant's name in lowercase (unless specifically renamed).
+
+  For instance, if a JSON object has "T": "b", it will be deserialized into the Bar variant.
+*/
 #[derive(Debug, Deserialize)]
 #[serde(tag = "T", rename_all = "lowercase")]
 pub enum AlpacaMessage {
+    // The #[serde(rename = "success")] attribute is used here for explicitness or if you want to ensure this variant always maps to the string "success" in the input data.
+    // 
+    // The #[serde(rename_all = "lowercase")] at the enum level means that, by default, variant names will be lowercased unless a variant-specific #[serde(rename = ...)] is given.
+    // If you remove #[serde(rename = "success")], Serde will still map the Success variant to "success" in lowercase because of the rename_all.
+    // 
+    // So, in this case, you do not strictly need the #[serde(rename = "success")]; it's redundant, but doesn't hurt unless you want to override or clarify.
     #[serde(rename = "success")]
     Success { 
         msg: String 
@@ -59,7 +68,7 @@ pub struct Bar {
     #[serde(rename = "n")]
     pub trade_count: u64,
     #[serde(rename = "vw")]
-    pub volume_weighted_average_price: f64,
+    pub vwap: f64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -104,4 +113,10 @@ pub struct Trade {
     pub tape: String,
     #[serde(rename = "t")]
     pub timestamp: String,
+}
+
+impl AlpacaMessage {
+    pub fn parse(text: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(text)
+    }
 }
