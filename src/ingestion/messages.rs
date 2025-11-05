@@ -115,8 +115,17 @@ pub struct Trade {
     pub timestamp: String,
 }
 
-impl AlpacaMessage {
-    pub fn parse(text: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(text)
-    }
-}
+
+// This implementation block adds a `parse` associated function to the `AlpacaMessage` type.
+// The `parse` function takes a string slice (`&str`) containing JSON, 
+// and attempts to deserialize it into an `AlpacaMessage` instance using Serde's `from_str` function.
+// The function returns a `Result<Self, serde_json::Error>`, which means it either yields a successfully parsed `AlpacaMessage` (`Ok(Self)`), 
+// or an error if parsing fails (`Err(serde_json::Error)`).
+// The `Self` keyword here refers to the type on which the `impl` block is defined, i.e., `AlpacaMessage`.
+// The `parse` method is redundant since `AlpacaMessage` implements `Deserialize`, 
+// so we can use `serde_json::from_str::<AlpacaMessage>(text)` wherever needed.
+// impl AlpacaMessage {
+//     pub fn parse(text: &str) -> Result<Self, serde_json::Error> {
+//         serde_json::from_str(text)
+//     }
+// }
