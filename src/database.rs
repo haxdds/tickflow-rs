@@ -19,7 +19,7 @@ impl Database {
         // this is required for tokio_postgres to work
         tokio::spawn(async move {
             if let Err(e) = connection.await {
-                eprintln!("Database connection error: {}", e);
+                error!("Database connection error: {}", e);
             }
         });
 
