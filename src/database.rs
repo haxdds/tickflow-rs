@@ -1,8 +1,7 @@
 // Leanring 
 
-use anyhow::{Context, Result};
 use tokio_postgres::{Client, NoTls}; // NoTls disables TLS encryption for local/dev use
-use tracing::info;
+use tracing::{info, error};
 
 
 
@@ -12,15 +11,11 @@ pub struct Database {
 
 impl Database {
 
-    pub async fn connect(connection_string: &str) -> Result<Self> {
+    pub async fn connect(connection_string: &str) -> Result<Self, tokio_postgres::Error> {
         info!("Connecting to database...");
 
-        let (client, connection) = tokio_postgres::connect(connection_string, NoTls)
-            .await
-            // If the async connection fails, attach extra context for clearer error reporting.
-            .context("Failed to connect to database")?;
+        let (client, connection) = tokio_postgres::connect(connection_string, NoTls).await?;
 
-        
         // this is required for tokio_postgres to work
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -33,9 +28,9 @@ impl Database {
         Ok(Database { client })
     }
 
-    pub async fn initialize_schema(&self) -> Result<()> {
+    pub async fn initialize_schema(&self) -> Result<(), tokio_postgres::Error> {
         info!("Initializing database schema...");
-        
+
         // Create bars table for OHLCV data
         self.client
             .execute(
@@ -55,9 +50,8 @@ impl Database {
                 )",
                 &[],
             )
-            .await
-            .context("Failed to create bars table")?;
-        
+            .await?;
+
         // Create quotes table for bid/ask data
         self.client
             .execute(
@@ -76,9 +70,8 @@ impl Database {
                 )",
                 &[],
             )
-            .await
-            .context("Failed to create quotes table")?;
-        
+            .await?;
+
         // Create trades table
         self.client
             .execute(
@@ -96,14 +89,13 @@ impl Database {
                 )",
                 &[],
             )
-            .await
-            .context("Failed to create trades table")?;
-        
+            .await?;
+
         info!("Database schema initialized");
         Ok(())
     }
 
-        /// Insert a bar (OHLCV) record
+    /// Insert a bar (OHLCV) record
     /// 
     /// Learning: PARAMETERIZED QUERIES
     /// The $1, $2, etc. are placeholders for parameters
@@ -119,7 +111,7 @@ impl Database {
         timestamp: &str,
         trade_count: i64,
         vwap: f64,
-    ) -> Result<()> {
+    ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
                 "INSERT INTO bars (symbol, open, high, low, close, volume, timestamp, trade_count, vwap)
@@ -127,8 +119,7 @@ impl Database {
                  ON CONFLICT (symbol, timestamp) DO NOTHING",
                 &[&symbol, &open, &high, &low, &close, &volume, &timestamp, &trade_count, &vwap],
             )
-            .await
-            .context("Failed to insert bar")?;
+            .await?;
         
         Ok(())
     }
@@ -145,7 +136,7 @@ impl Database {
         ask_size: i64,
         timestamp: &str,
         tape: &str,
-    ) -> Result<()> {
+    ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
                 "INSERT INTO quotes (symbol, bid_exchange, bid_price, bid_size, 
@@ -154,11 +145,11 @@ impl Database {
                 &[&symbol, &bid_exchange, &bid_price, &bid_size, 
                     &ask_exchange, &ask_price, &ask_size, &timestamp, &tape],
             )
-            .await
-            .context("Failed to insert quote")?;
+            .await?;
         
         Ok(())
     }
+
     /// Insert a trade record
     pub async fn insert_trade(
         &self,
@@ -169,7 +160,7 @@ impl Database {
         size: i64,
         timestamp: &str,
         tape: &str,
-    ) -> Result<()> {
+    ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
                 "INSERT INTO trades (trade_id, symbol, exchange, price, size, timestamp, tape)
@@ -177,10 +168,8 @@ impl Database {
                  ON CONFLICT (trade_id, symbol) DO NOTHING",
                 &[&trade_id, &symbol, &exchange, &price, &size, &timestamp, &tape],
             )
-            .await
-            .context("Failed to insert trade")?;
+            .await?;
         
         Ok(())
     }
-
 }
