@@ -34,6 +34,7 @@ impl AlpacaWebSocketClient {
     }
 
     pub async fn connect(&mut self) -> Result<(), WsError> {
+        info!("Try connect to websocket");
         let (ws_stream, _) = tokio_tungstenite::connect_async(&self.url).await?;
         info!("WebSocket connected");
         let (write, read) = ws_stream.split();
@@ -62,7 +63,7 @@ impl AlpacaWebSocketClient {
             "key": self.api_key,
             "secret": self.api_secret
         });
-        
+        info!("Authenticationg");
         self.send(Message::Text(payload.to_string())).await
     }
 
@@ -84,20 +85,23 @@ impl AlpacaWebSocketClient {
         self.send(Message::Text(payload.to_string())).await
     }
 
-    pub async fn stream_messages(&mut self, tx: tokio::sync::mpsc::Sender<AlpacaMessage>) -> Result<(), WsError> {
+    pub async fn stream_messages(&mut self, tx: tokio::sync::mpsc::Sender<Vec<AlpacaMessage>>) -> Result<(), WsError> {
+        info!("Taking read stream...");
         let mut read = match self.read.take() {
             Some(read) => read,
             None => panic!("There was an error streaming"),
         };
 
+        info!("Watching read stream...");
         while let Some(message) = read.next().await {
+            
             match message {
                 Ok(Message::Text(text)) => {
-                    if let Ok(parsed) = serde_json::from_str::<AlpacaMessage>(&text) {
-                        if tx.send(parsed).await.is_err() {
-                            warn! { "Receiver dropped, stopping stream" };
-                            break;
-                        }
+                    info!("message: {},", &text);
+                    if let Ok(parsed) = serde_json::from_str::<Vec<AlpacaMessage>>(&text) {
+                        // info!("message!");
+                        let _ = tx.send(parsed).await;
+
                     } else {
                         debug!("Failed to parse message");
                     }

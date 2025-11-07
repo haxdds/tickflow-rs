@@ -1,5 +1,6 @@
 // Leanring 
 
+use chrono::NaiveDateTime;
 use tokio_postgres::{Client, NoTls}; // NoTls disables TLS encryption for local/dev use
 use tracing::{info, error};
 
@@ -108,7 +109,7 @@ impl Database {
         low: f64,
         close: f64,
         volume: i64,
-        timestamp: &str,
+        timestamp: NaiveDateTime,
         trade_count: i64,
         vwap: f64,
     ) -> Result<(), tokio_postgres::Error> {
@@ -134,7 +135,7 @@ impl Database {
         ask_exchange: &str,
         ask_price: f64,
         ask_size: i64,
-        timestamp: &str,
+        timestamp: NaiveDateTime,
         tape: &str,
     ) -> Result<(), tokio_postgres::Error> {
         self.client
@@ -158,7 +159,7 @@ impl Database {
         exchange: &str,
         price: f64,
         size: i64,
-        timestamp: &str,
+        timestamp: NaiveDateTime,
         tape: &str,
     ) -> Result<(), tokio_postgres::Error> {
         self.client
