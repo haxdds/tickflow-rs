@@ -38,8 +38,11 @@ pub enum AlpacaMessage {
     #[serde(rename = "subscription")]
     #[serde(rename_all = "camelCase")]
     Subscription { 
+        #[serde(default)]
         trades: Vec<String>,
+        #[serde(default)]
         quotes: Vec<String>,
+        #[serde(default)]
         bars: Vec<String>,
         #[serde(default)]
         updated_bars: Vec<String>,
@@ -165,6 +168,9 @@ impl Quote {
 /// Trade data
 #[derive(Debug, Deserialize)]
 pub struct Trade {
+    #[serde(rename = "T")]
+    pub t: Option<String>,
+
     #[serde(rename = "S")]
     pub symbol: String,
     
