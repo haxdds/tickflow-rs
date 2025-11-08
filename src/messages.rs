@@ -45,6 +45,8 @@ pub enum AlpacaMessage {
         #[serde(default)]
         bars: Vec<String>,
         #[serde(default)]
+        orderbooks: Vec<String>,
+        #[serde(default)]
         updated_bars: Vec<String>,
         #[serde(default)]
         daily_bars: Vec<String>,
@@ -99,7 +101,7 @@ pub struct Bar {
     pub close: f64,
     
     #[serde(rename = "v")]
-    pub volume: u64,
+    pub volume: f64,
     
     #[serde(rename = "t")]
     pub timestamp: String,
@@ -134,7 +136,7 @@ pub struct Quote {
     pub bid_price: f64,
     
     #[serde(rename = "bs")]
-    pub bid_size: u64,
+    pub bid_size: f64,
     
     #[serde(rename = "ax")]
     pub ask_exchange: String,
@@ -143,7 +145,7 @@ pub struct Quote {
     pub ask_price: f64,
     
     #[serde(rename = "as")]
-    pub ask_size: u64,
+    pub ask_size: f64,
     
     #[serde(rename = "c")]
     pub conditions: Vec<String>,
@@ -184,7 +186,7 @@ pub struct Trade {
     pub price: f64,
     
     #[serde(rename = "s")]
-    pub size: u64,
+    pub size: f64,
     
     #[serde(rename = "c")]
     pub conditions: Vec<String>,
