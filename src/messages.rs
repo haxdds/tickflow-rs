@@ -107,10 +107,10 @@ pub struct Bar {
     pub timestamp: String,
     
     #[serde(rename = "n")]
-    pub trade_count: u64,
+    pub trade_count: Option<u64>,
     
     #[serde(rename = "vw")]
-    pub vwap: f64,
+    pub vwap: Option<f64>,
 }
 
 impl Bar {
@@ -130,7 +130,7 @@ pub struct Quote {
     pub symbol: String,
     
     #[serde(rename = "bx")]
-    pub bid_exchange: String,
+    pub bid_exchange: Option<String>,
     
     #[serde(rename = "bp")]
     pub bid_price: f64,
@@ -139,7 +139,7 @@ pub struct Quote {
     pub bid_size: f64,
     
     #[serde(rename = "ax")]
-    pub ask_exchange: String,
+    pub ask_exchange: Option<String>,
     
     #[serde(rename = "ap")]
     pub ask_price: f64,
@@ -148,10 +148,10 @@ pub struct Quote {
     pub ask_size: f64,
     
     #[serde(rename = "c")]
-    pub conditions: Vec<String>,
+    pub conditions: Option<Vec<String>>,
     
     #[serde(rename = "z")]
-    pub tape: String,
+    pub tape: Option<String>,
     
     #[serde(rename = "t")]
     pub timestamp: String,
@@ -180,7 +180,7 @@ pub struct Trade {
     pub id: u64,
     
     #[serde(rename = "x")]
-    pub exchange: String,
+    pub exchange: Option<String>,
     
     #[serde(rename = "p")]
     pub price: f64,
@@ -189,10 +189,13 @@ pub struct Trade {
     pub size: f64,
     
     #[serde(rename = "c")]
-    pub conditions: Vec<String>,
+    pub conditions: Option<Vec<String>>,
     
     #[serde(rename = "z")]
-    pub tape: String,
+    pub tape: Option<String>,
+
+    #[serde(rename = "tks")]
+    pub tks: Option<String>,
     
     #[serde(rename = "t")]
     pub timestamp: String,

@@ -108,7 +108,7 @@ impl MessageProcessor {
                 );
                 let ts = DateTime::parse_from_rfc3339(&bar.timestamp)?
                 .naive_utc();
-                
+                let trade_count = bar.trade_count.map(|count| count as i64);
                 // Store in database
                 self.database
                     .insert_bar(
@@ -119,8 +119,8 @@ impl MessageProcessor {
                         bar.close,
                         bar.volume as i64,
                         ts,
-                        bar.trade_count as i64,
-                        bar.vwap,
+                        &trade_count,
+                        &bar.vwap,
                     )
                     .await?;
             }
@@ -153,10 +153,9 @@ impl MessageProcessor {
             }
             
             AlpacaMessage::Trade(trade) => {
-                info!("trade!");
                 debug!(
-                    "💸 TRADE: {} Price:{} Size:{} on {}",
-                    trade.symbol, trade.price, trade.size, trade.exchange
+                    "💸 TRADE: {} Price:{} Size:{}",
+                    trade.symbol, trade.price, trade.size
                 );
                 let ts = DateTime::parse_from_rfc3339(&trade.timestamp)?
                 .naive_utc();
@@ -170,6 +169,7 @@ impl MessageProcessor {
                         trade.size as i64,
                         ts,
                         &trade.tape,
+                        &trade.tks,
                     )
                     .await?;
             }

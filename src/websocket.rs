@@ -99,7 +99,6 @@ impl AlpacaWebSocketClient {
                 Ok(Message::Text(text)) => {
                     info!("message: {},", &text);
                     if let Ok(parsed) = serde_json::from_str::<Vec<AlpacaMessage>>(&text) {
-                        // info!("message!");
                         let _ = tx.send(parsed).await;
 
                     } else {

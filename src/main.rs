@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
     let database = Database::connect(&db_url).await?;
     
     // Initialize schema
-    // database.initialize_schema().await?;
+    database.initialize_schema().await?;
     
     // Create channel for passing messages
     // Learning: MPSC CHANNEL CREATION
@@ -97,7 +97,7 @@ async fn main() -> Result<()> {
             if let Err(e) = ws_client.authenticate().await {
                 error!("Authenticate error: {}", e);
             }
-            if let Err(e) = ws_client.subscribe(&[], &[], &["AAPL"]).await {
+            if let Err(e) = ws_client.subscribe(&[], &["ETH/USD"], &[]).await {
                 error!("Subscribe error: {}", e);
             }
 

@@ -44,8 +44,8 @@ impl Database {
                     close DOUBLE PRECISION NOT NULL,
                     volume BIGINT NOT NULL,
                     timestamp TIMESTAMP NOT NULL,
-                    trade_count BIGINT NOT NULL,
-                    vwap DOUBLE PRECISION NOT NULL,
+                    trade_count BIGINT,
+                    vwap DOUBLE PRECISION,
                     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(symbol, timestamp)
                 )",
@@ -59,14 +59,14 @@ impl Database {
                 "CREATE TABLE IF NOT EXISTS quotes (
                     id SERIAL PRIMARY KEY,
                     symbol VARCHAR(10) NOT NULL,
-                    bid_exchange VARCHAR(10) NOT NULL,
+                    bid_exchange VARCHAR(10),
                     bid_price DOUBLE PRECISION NOT NULL,
                     bid_size BIGINT NOT NULL,
-                    ask_exchange VARCHAR(10) NOT NULL,
+                    ask_exchange VARCHAR(10),
                     ask_price DOUBLE PRECISION NOT NULL,
                     ask_size BIGINT NOT NULL,
                     timestamp TIMESTAMP NOT NULL,
-                    tape VARCHAR(5) NOT NULL,
+                    tape VARCHAR(5),
                     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )",
                 &[],
@@ -80,11 +80,12 @@ impl Database {
                     id SERIAL PRIMARY KEY,
                     trade_id BIGINT NOT NULL,
                     symbol VARCHAR(10) NOT NULL,
-                    exchange VARCHAR(10) NOT NULL,
+                    exchange VARCHAR(10),
                     price DOUBLE PRECISION NOT NULL,
                     size BIGINT NOT NULL,
                     timestamp TIMESTAMP NOT NULL,
-                    tape VARCHAR(5) NOT NULL,
+                    tape VARCHAR(5),
+                    tks VARCHAR(5),
                     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(trade_id, symbol)
                 )",
@@ -110,8 +111,8 @@ impl Database {
         close: f64,
         volume: i64,
         timestamp: NaiveDateTime,
-        trade_count: i64,
-        vwap: f64,
+        trade_count: &Option<i64>,
+        vwap: &Option<f64>,
     ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
@@ -129,14 +130,14 @@ impl Database {
     pub async fn insert_quote(
         &self,
         symbol: &str,
-        bid_exchange: &str,
+        bid_exchange: &Option<String>,
         bid_price: f64,
         bid_size: i64,
-        ask_exchange: &str,
+        ask_exchange: &Option<String>,
         ask_price: f64,
         ask_size: i64,
         timestamp: NaiveDateTime,
-        tape: &str,
+        tape: &Option<String>,
     ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
@@ -156,18 +157,19 @@ impl Database {
         &self,
         trade_id: i64,
         symbol: &str,
-        exchange: &str,
+        exchange: &Option<String>,
         price: f64,
         size: i64,
         timestamp: NaiveDateTime,
-        tape: &str,
+        tape: &Option<String>,
+        tks: &Option<String>
     ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
-                "INSERT INTO trades (trade_id, symbol, exchange, price, size, timestamp, tape)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                "INSERT INTO trades (trade_id, symbol, exchange, price, size, timestamp, tape, tks)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                  ON CONFLICT (trade_id, symbol) DO NOTHING",
-                &[&trade_id, &symbol, &exchange, &price, &size, &timestamp, &tape],
+                &[&trade_id, &symbol, &exchange, &price, &size, &timestamp, &tape, &tks],
             )
             .await?;
         
