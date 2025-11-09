@@ -25,6 +25,9 @@ pub struct AlpacaWebSocketClient {
     url: String,
     api_key: String,
     api_secret: String,
+    bars: Vec<String>,
+    quotes: Vec<String>,
+    trades: Vec<String>,
     write: Option<AlpacaSink>,
     read: Option<AlpacaStream>,
 }
@@ -37,7 +40,12 @@ impl MessageSource<AlpacaMessage> for AlpacaWebSocketClient {
         Box::pin(async move {
             self.connect().await?;
             self.authenticate().await?;
-            self.subscribe(&[], &["ETH/USD"], &[]).await?;
+            self.subscribe(
+                self.bars.clone(),
+                self.quotes.clone(),
+                self.trades.clone(),
+            )
+            .await?;
             self.stream_messages(tx).await?;
             Ok(())
         })
@@ -46,11 +54,21 @@ impl MessageSource<AlpacaMessage> for AlpacaWebSocketClient {
 
 impl AlpacaWebSocketClient {
     /// Creates a new websocket client configured with Alpaca credentials.
-    pub fn new(url: &str, api_key: &str, api_secret: &str) -> Self {
+    pub fn new(
+        url: &str,
+        api_key: &str,
+        api_secret: &str,
+        bars: &[&str],
+        quotes: &[&str],
+        trades: &[&str],
+    ) -> Self {
         Self {
             url: url.to_string(),
             api_key: api_key.to_string(),
             api_secret: api_secret.to_string(),
+            bars: bars.iter().map(|s| s.to_string()).collect(),
+            quotes: quotes.iter().map(|s| s.to_string()).collect(),
+            trades: trades.iter().map(|s| s.to_string()).collect(),
             write: None,
             read: None,
         }
@@ -100,9 +118,9 @@ impl AlpacaWebSocketClient {
     /// Subscribes to provided channel lists, sending a single request to Alpaca.
     pub async fn subscribe(
         &mut self,
-        bars: &[&str],
-        quotes: &[&str],
-        trades: &[&str],
+        bars: Vec<String>,
+        quotes: Vec<String>,
+        trades: Vec<String>,
     ) -> Result<(), WsError> {
         let payload = json!({
             "action": "subscribe",
