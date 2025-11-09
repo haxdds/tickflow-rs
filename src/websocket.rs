@@ -1,13 +1,14 @@
 // #![allow(unused_imports)]
 
-use futures_util::{SinkExt, StreamExt};
 use futures_util::stream::{SplitSink, SplitStream};
+use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
-use tokio_tungstenite::{tungstenite::protocol::Message, WebSocketStream};
-use tokio_tungstenite::tungstenite::Error as WsError;
-use tokio_tungstenite::MaybeTlsStream;
 use tokio::net::TcpStream;
+use tokio_tungstenite::MaybeTlsStream;
+use tokio_tungstenite::tungstenite::Error as WsError;
+use tokio_tungstenite::{WebSocketStream, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};
+use std::pin::Pin;
 
 use crate::messages::AlpacaMessage;
 
@@ -20,6 +21,23 @@ pub struct AlpacaWebSocketClient {
     api_secret: String,
     write: Option<AlpacaSink>,
     read: Option<AlpacaStream>,
+}
+
+use crate::message_types::{MessageBatch, MessageSource};
+
+impl MessageSource<AlpacaMessage> for AlpacaWebSocketClient {
+    fn run<'a>(
+        &'a mut self,
+        tx: tokio::sync::mpsc::Sender<MessageBatch<AlpacaMessage>>,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            self.connect().await?;
+            self.authenticate().await?;
+            self.subscribe(&[], &["ETH/USD"], &[]).await?;
+            self.stream_messages(tx).await?;
+            Ok(())
+        })
+    }
 }
 
 impl AlpacaWebSocketClient {
@@ -38,7 +56,7 @@ impl AlpacaWebSocketClient {
         let (ws_stream, _) = tokio_tungstenite::connect_async(&self.url).await?;
         info!("WebSocket connected");
         let (write, read) = ws_stream.split();
-        
+
         self.write = Some(write);
         self.read = Some(read);
         Ok(())
@@ -50,7 +68,9 @@ impl AlpacaWebSocketClient {
             // Take the write part out so we can use it
             let mut write = self.write.take().unwrap();
             // Try sending a Close message (ignore errors)
-            let _ = write.send(tungstenite::protocol::Message::Close(None)).await;
+            let _ = write
+                .send(tungstenite::protocol::Message::Close(None))
+                .await;
             let _ = write.close().await;
         }
         self.read = None;
@@ -74,18 +94,26 @@ impl AlpacaWebSocketClient {
         }
     }
 
-    pub async fn subscribe(&mut self, bars: &[&str], quotes: &[&str], trades: &[&str]) -> Result<(), WsError> {
+    pub async fn subscribe(
+        &mut self,
+        bars: &[&str],
+        quotes: &[&str],
+        trades: &[&str],
+    ) -> Result<(), WsError> {
         let payload = json!({
             "action": "subscribe",
             "bars": bars,
             "quotes": quotes,
             "trades": trades
         });
-        
+
         self.send(Message::Text(payload.to_string())).await
     }
 
-    pub async fn stream_messages(&mut self, tx: tokio::sync::mpsc::Sender<Vec<AlpacaMessage>>) -> Result<(), WsError> {
+    pub async fn stream_messages(
+        &mut self,
+        tx: tokio::sync::mpsc::Sender<Vec<AlpacaMessage>>,
+    ) -> Result<(), WsError> {
         info!("Taking read stream...");
         let mut read = match self.read.take() {
             Some(read) => read,
@@ -94,14 +122,11 @@ impl AlpacaWebSocketClient {
 
         info!("Watching read stream...");
         while let Some(message) = read.next().await {
-            
             match message {
                 Ok(Message::Text(text)) => {
                     info!("message: {},", &text);
                     if let Ok(parsed) = serde_json::from_str::<Vec<AlpacaMessage>>(&text) {
-                        // info!("message!");
                         let _ = tx.send(parsed).await;
-
                     } else {
                         debug!("Failed to parse message");
                     }
@@ -130,5 +155,4 @@ impl AlpacaWebSocketClient {
 
         Ok(())
     }
-
 }
