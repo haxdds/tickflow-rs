@@ -18,7 +18,7 @@ impl AppConfig {
             .unwrap_or(1_000);
 
         let database_url = match env::var("DATABASE_URL") {
-            Ok(val) => val, 
+            Ok(val) => val,
             Err(_) => return Err(anyhow!("DATABASE_URL must be set")),
         };
 
@@ -31,7 +31,7 @@ impl AppConfig {
             Ok(val) => val,
             Err(_) => return Err(anyhow!("APCA_API_SECRET_KEY must be set")),
         };
- 
+
         let alpaca_ws_url = match env::var("APCA_WS_URL") {
             Ok(val) => val,
             Err(_) => return Err(anyhow!("ALPACA_WS_URL must be set")),

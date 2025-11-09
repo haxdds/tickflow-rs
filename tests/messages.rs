@@ -1,4 +1,4 @@
-use tickflow::messages::{AlpacaMessage, Bar};
+use tickflow::connectors::alpaca::types::{AlpacaMessage, Bar};
 
 // Part 1: Parsing different message types
 

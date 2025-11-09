@@ -1,13 +1,14 @@
-// Leanring
-
-use crate::message_types::{MessageBatch, MessageSink};
-use crate::messages::{AlpacaMessage, Bar, Quote, Trade};
-use anyhow::{Context, Result};
-use chrono::{DateTime, NaiveDateTime};
 use std::future::Future;
 use std::pin::Pin;
-use tokio_postgres::{Client, NoTls}; // NoTls disables TLS encryption for local/dev use
+
+use anyhow::{Context, Result};
+use chrono::{DateTime, NaiveDateTime};
+use tokio_postgres::{Client, NoTls};
 use tracing::{error, info};
+
+use crate::core::{MessageBatch, MessageSink};
+
+use crate::connectors::alpaca::types::{AlpacaMessage, Bar, Quote, Trade};
 
 pub struct Database {
     client: Client,
@@ -125,7 +126,6 @@ impl Database {
 
         let (client, connection) = tokio_postgres::connect(connection_string, NoTls).await?;
 
-        // this is required for tokio_postgres to work
         tokio::spawn(async move {
             if let Err(e) = connection.await {
                 error!("Database connection error: {}", e);
@@ -140,7 +140,6 @@ impl Database {
     pub async fn initialize_schema(&self) -> Result<(), tokio_postgres::Error> {
         info!("Initializing database schema...");
 
-        // Create bars table for OHLCV data
         self.client
             .execute(
                 "CREATE TABLE IF NOT EXISTS bars (
@@ -161,7 +160,6 @@ impl Database {
             )
             .await?;
 
-        // Create quotes table for bid/ask data
         self.client
             .execute(
                 "CREATE TABLE IF NOT EXISTS quotes (
@@ -181,7 +179,6 @@ impl Database {
             )
             .await?;
 
-        // Create trades table
         self.client
             .execute(
                 "CREATE TABLE IF NOT EXISTS trades (
@@ -205,11 +202,6 @@ impl Database {
         Ok(())
     }
 
-    /// Insert a bar (OHLCV) record
-    ///
-    /// Learning: PARAMETERIZED QUERIES
-    /// The $1, $2, etc. are placeholders for parameters
-    /// This prevents SQL injection and handles type conversion
     pub async fn insert_bar(
         &self,
         symbol: &str,
@@ -234,7 +226,6 @@ impl Database {
         Ok(())
     }
 
-    /// Insert a quote record
     pub async fn insert_quote(
         &self,
         symbol: &str,
@@ -269,7 +260,6 @@ impl Database {
         Ok(())
     }
 
-    /// Insert a trade record
     pub async fn insert_trade(
         &self,
         trade_id: i64,

@@ -1,35 +1,16 @@
-// Learning Goals:
-// - Derive macros (#[derive])
-// - Serde's Deserialize trait
-// - Tagged enums with #[serde(tag)]
-// - Field renaming with #[serde(rename)]
-// - Option<T> for optional fields
-
 use serde::Deserialize;
 
-/// Main message type from Alpaca WebSocket API
-///
-/// Rust Concept: TAGGED ENUM
-/// The #[serde(tag = "T")] tells serde to look at a field called "T"
-/// in the JSON to determine which variant to deserialize into.
-///
-/// Example JSON: {"T": "b", "S": "AAPL", "o": 150.0, ...}
-/// This would deserialize into AlpacaMessage::Bar(Bar { ... })
+use crate::core::Message;
+
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "T", rename_all = "lowercase")]
 pub enum AlpacaMessage {
-    /// Connection success message
-    /// Example: {"T": "success", "msg": "authenticated"}
     #[serde(rename = "success")]
     Success { msg: String },
 
-    /// Error message from server
-    /// Example: {"T": "error", "code": 401, "msg": "invalid key"}
     #[serde(rename = "error")]
     Error { code: u16, msg: String },
 
-    /// Subscription confirmation
-    /// Example: {"T": "subscription", "trades": ["AAPL"], "quotes": [], ...}
     #[serde(rename = "subscription")]
     #[serde(rename_all = "camelCase")]
     Subscription {
@@ -55,31 +36,18 @@ pub enum AlpacaMessage {
         cancel_errors: Vec<String>,
     },
 
-    /// Bar (OHLCV) message
-    /// Example: {"T": "b", "S": "AAPL", "o": 150.0, ...}
-    ///
-    /// Rust Concept: ENUM VARIANT WITH DATA
-    /// This variant contains a Bar struct (tuple-style)
     #[serde(rename = "b")]
     Bar(Bar),
 
-    /// Quote message
     #[serde(rename = "q")]
     Quote(Quote),
 
-    /// Trade message
     #[serde(rename = "t")]
     Trade(Trade),
 }
 
-impl crate::message_types::Message for AlpacaMessage {}
+impl Message for AlpacaMessage {}
 
-/// Bar (OHLCV) data
-///
-/// Rust Concept: FIELD RENAMING
-/// Alpaca uses short field names (single letters) in JSON
-/// We use descriptive names in Rust for clarity
-/// #[serde(rename = "S")] maps Rust's `symbol` field to JSON's "S" field
 #[derive(Debug, Deserialize, Clone)]
 pub struct Bar {
     #[serde(rename = "S")]
@@ -120,7 +88,6 @@ impl Bar {
     }
 }
 
-/// Quote (bid/ask) data
 #[derive(Debug, Deserialize, Clone)]
 pub struct Quote {
     #[serde(rename = "S")]
@@ -164,7 +131,6 @@ impl Quote {
     }
 }
 
-/// Trade data
 #[derive(Debug, Deserialize, Clone)]
 pub struct Trade {
     #[serde(rename = "T")]

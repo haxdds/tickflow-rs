@@ -1,10 +1,10 @@
-
-use crate::message_types::{Message, MessageBatch, MessageSink, MessageSource};
-use crate::processor::MessageProcessor;
+use crate::core::{Message, MessageBatch, MessageSink, MessageSource};
 use anyhow::Result;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tracing::error;
+
+use super::{MessageProcessor, TickflowBuilder};
 
 pub struct SPSCDataFeed<M, Src>
 where
@@ -26,9 +26,16 @@ where
     M: Message,
     Src: MessageSource<M>,
 {
-    pub fn new<Sink>(source: Src, sink: Sink, channel_capacity: usize) -> Self 
+    pub fn builder<Sink>(source: Src, sink: Sink) -> TickflowBuilder<M, Src, Sink>
     where
-        Sink: MessageSink<M>
+        Sink: MessageSink<M>,
+    {
+        TickflowBuilder::new(source, sink)
+    }
+
+    pub fn new<Sink>(source: Src, sink: Sink, channel_capacity: usize) -> Self
+    where
+        Sink: MessageSink<M>,
     {
         Self {
             source,

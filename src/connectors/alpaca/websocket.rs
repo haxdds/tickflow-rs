@@ -1,16 +1,19 @@
-// #![allow(unused_imports)]
+use std::future::Future;
+use std::pin::Pin;
 
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use tokio::net::TcpStream;
-use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::tungstenite::Error as WsError;
-use tokio_tungstenite::{WebSocketStream, tungstenite::protocol::Message};
-use tracing::{debug, error, info, warn};
-use std::pin::Pin;
+use tokio_tungstenite::{
+    MaybeTlsStream, WebSocketStream, connect_async, tungstenite::protocol::Message,
+};
+use tracing::{debug, error, info};
 
-use crate::messages::AlpacaMessage;
+use crate::core::{MessageBatch, MessageSource};
+
+use super::types::AlpacaMessage;
 
 type AlpacaSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type AlpacaStream = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
@@ -22,8 +25,6 @@ pub struct AlpacaWebSocketClient {
     write: Option<AlpacaSink>,
     read: Option<AlpacaStream>,
 }
-
-use crate::message_types::{MessageBatch, MessageSource};
 
 impl MessageSource<AlpacaMessage> for AlpacaWebSocketClient {
     fn run<'a>(
@@ -53,7 +54,7 @@ impl AlpacaWebSocketClient {
 
     pub async fn connect(&mut self) -> Result<(), WsError> {
         info!("Try connect to websocket");
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&self.url).await?;
+        let (ws_stream, _) = connect_async(&self.url).await?;
         info!("WebSocket connected");
         let (write, read) = ws_stream.split();
 
@@ -63,27 +64,22 @@ impl AlpacaWebSocketClient {
     }
 
     pub async fn disconnect(&mut self) -> Result<(), WsError> {
-        // Always try to close the websocket connection, even if it's already closed
         if self.write.is_some() {
-            // Take the write part out so we can use it
             let mut write = self.write.take().unwrap();
-            // Try sending a Close message (ignore errors)
-            let _ = write
-                .send(tungstenite::protocol::Message::Close(None))
-                .await;
+            let _ = write.send(Message::Close(None)).await;
             let _ = write.close().await;
         }
         self.read = None;
         Ok(())
     }
 
-    pub async fn authenticate(&mut self) -> Result<(), tungstenite::Error> {
+    pub async fn authenticate(&mut self) -> Result<(), WsError> {
         let payload = json!({
             "action": "auth",
             "key": self.api_key,
             "secret": self.api_secret
         });
-        info!("Authenticationg");
+        info!("Authenticating");
         self.send(Message::Text(payload.to_string())).await
     }
 
@@ -112,7 +108,7 @@ impl AlpacaWebSocketClient {
 
     pub async fn stream_messages(
         &mut self,
-        tx: tokio::sync::mpsc::Sender<Vec<AlpacaMessage>>,
+        tx: tokio::sync::mpsc::Sender<MessageBatch<AlpacaMessage>>,
     ) -> Result<(), WsError> {
         info!("Taking read stream...");
         let mut read = match self.read.take() {
