@@ -1,16 +1,124 @@
-// Leanring 
+// Leanring
 
-use chrono::NaiveDateTime;
+use crate::message_types::{MessageBatch, MessageSink};
+use crate::messages::{AlpacaMessage, Bar, Quote, Trade};
+use anyhow::{Context, Result};
+use chrono::{DateTime, NaiveDateTime};
+use std::future::Future;
+use std::pin::Pin;
 use tokio_postgres::{Client, NoTls}; // NoTls disables TLS encryption for local/dev use
-use tracing::{info, error};
-
-
+use tracing::{error, info};
 
 pub struct Database {
     client: Client,
 }
 
+impl MessageSink<AlpacaMessage> for Database {
+    fn name(&self) -> &'static str {
+        "postgres"
+    }
+
+    fn handle_batch<'a>(
+        &'a self,
+        batch: MessageBatch<AlpacaMessage>,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut bars = Vec::new();
+            let mut quotes = Vec::new();
+            let mut trades = Vec::new();
+
+            for message in batch {
+                match message {
+                    AlpacaMessage::Bar(bar) => bars.push(bar),
+                    AlpacaMessage::Quote(quote) => quotes.push(quote),
+                    AlpacaMessage::Trade(trade) => trades.push(trade),
+                    _ => {}
+                }
+            }
+
+            if !bars.is_empty() {
+                self.insert_bars_batch(&bars).await?;
+            }
+
+            if !quotes.is_empty() {
+                self.insert_quotes_batch(&quotes).await?;
+            }
+
+            if !trades.is_empty() {
+                self.insert_trades_batch(&trades).await?;
+            }
+
+            Ok(())
+        })
+    }
+}
+
 impl Database {
+    async fn insert_bars_batch(&self, bars: &[Bar]) -> Result<()> {
+        for bar in bars {
+            let timestamp = parse_timestamp(&bar.timestamp)?;
+            let trade_count = bar.trade_count.map(|count| count as i64);
+            let vwap = bar.vwap;
+
+            self.insert_bar(
+                &bar.symbol,
+                bar.open,
+                bar.high,
+                bar.low,
+                bar.close,
+                bar.volume as i64,
+                timestamp,
+                &trade_count,
+                &vwap,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn insert_quotes_batch(&self, quotes: &[Quote]) -> Result<()> {
+        for quote in quotes {
+            let timestamp = parse_timestamp(&quote.timestamp)?;
+            let bid_size = quote.bid_size as i64;
+            let ask_size = quote.ask_size as i64;
+
+            self.insert_quote(
+                &quote.symbol,
+                &quote.bid_exchange,
+                quote.bid_price,
+                bid_size,
+                &quote.ask_exchange,
+                quote.ask_price,
+                ask_size,
+                timestamp,
+                &quote.tape,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn insert_trades_batch(&self, trades: &[Trade]) -> Result<()> {
+        for trade in trades {
+            let timestamp = parse_timestamp(&trade.timestamp)?;
+
+            self.insert_trade(
+                trade.id as i64,
+                &trade.symbol,
+                &trade.exchange,
+                trade.price,
+                trade.size as i64,
+                timestamp,
+                &trade.tape,
+                &trade.tks,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
 
     pub async fn connect(connection_string: &str) -> Result<Self, tokio_postgres::Error> {
         info!("Connecting to database...");
@@ -98,7 +206,7 @@ impl Database {
     }
 
     /// Insert a bar (OHLCV) record
-    /// 
+    ///
     /// Learning: PARAMETERIZED QUERIES
     /// The $1, $2, etc. are placeholders for parameters
     /// This prevents SQL injection and handles type conversion
@@ -122,7 +230,7 @@ impl Database {
                 &[&symbol, &open, &high, &low, &close, &volume, &timestamp, &trade_count, &vwap],
             )
             .await?;
-        
+
         Ok(())
     }
 
@@ -144,11 +252,20 @@ impl Database {
                 "INSERT INTO quotes (symbol, bid_exchange, bid_price, bid_size, 
                                     ask_exchange, ask_price, ask_size, timestamp, tape)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-                &[&symbol, &bid_exchange, &bid_price, &bid_size, 
-                    &ask_exchange, &ask_price, &ask_size, &timestamp, &tape],
+                &[
+                    &symbol,
+                    &bid_exchange,
+                    &bid_price,
+                    &bid_size,
+                    &ask_exchange,
+                    &ask_price,
+                    &ask_size,
+                    &timestamp,
+                    &tape,
+                ],
             )
             .await?;
-        
+
         Ok(())
     }
 
@@ -162,17 +279,25 @@ impl Database {
         size: i64,
         timestamp: NaiveDateTime,
         tape: &Option<String>,
-        tks: &Option<String>
+        tks: &Option<String>,
     ) -> Result<(), tokio_postgres::Error> {
         self.client
             .execute(
                 "INSERT INTO trades (trade_id, symbol, exchange, price, size, timestamp, tape, tks)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                  ON CONFLICT (trade_id, symbol) DO NOTHING",
-                &[&trade_id, &symbol, &exchange, &price, &size, &timestamp, &tape, &tks],
+                &[
+                    &trade_id, &symbol, &exchange, &price, &size, &timestamp, &tape, &tks,
+                ],
             )
             .await?;
-        
+
         Ok(())
     }
+}
+
+fn parse_timestamp(value: &str) -> Result<NaiveDateTime> {
+    Ok(DateTime::parse_from_rfc3339(value)
+        .with_context(|| format!("failed to parse RFC3339 timestamp: {value}"))?
+        .naive_utc())
 }
