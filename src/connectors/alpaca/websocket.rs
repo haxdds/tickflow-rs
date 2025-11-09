@@ -1,3 +1,5 @@
+//! Alpaca market data websocket source implementation.
+
 use std::future::Future;
 use std::pin::Pin;
 
@@ -18,6 +20,7 @@ use super::types::AlpacaMessage;
 type AlpacaSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type AlpacaStream = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
+/// Streams Alpaca market data over a websocket and yields message batches.
 pub struct AlpacaWebSocketClient {
     url: String,
     api_key: String,
@@ -42,6 +45,7 @@ impl MessageSource<AlpacaMessage> for AlpacaWebSocketClient {
 }
 
 impl AlpacaWebSocketClient {
+    /// Creates a new websocket client configured with Alpaca credentials.
     pub fn new(url: &str, api_key: &str, api_secret: &str) -> Self {
         Self {
             url: url.to_string(),
@@ -52,6 +56,7 @@ impl AlpacaWebSocketClient {
         }
     }
 
+    /// Establishes the websocket connection and stores split read/write halves.
     pub async fn connect(&mut self) -> Result<(), WsError> {
         info!("Try connect to websocket");
         let (ws_stream, _) = connect_async(&self.url).await?;
@@ -63,6 +68,7 @@ impl AlpacaWebSocketClient {
         Ok(())
     }
 
+    /// Closes the websocket connection if it is currently open.
     pub async fn disconnect(&mut self) -> Result<(), WsError> {
         if self.write.is_some() {
             let mut write = self.write.take().unwrap();
@@ -73,6 +79,7 @@ impl AlpacaWebSocketClient {
         Ok(())
     }
 
+    /// Sends the authentication payload required by Alpaca.
     pub async fn authenticate(&mut self) -> Result<(), WsError> {
         let payload = json!({
             "action": "auth",
@@ -90,6 +97,7 @@ impl AlpacaWebSocketClient {
         }
     }
 
+    /// Subscribes to provided channel lists, sending a single request to Alpaca.
     pub async fn subscribe(
         &mut self,
         bars: &[&str],
@@ -106,6 +114,7 @@ impl AlpacaWebSocketClient {
         self.send(Message::Text(payload.to_string())).await
     }
 
+    /// Streams incoming websocket messages and forwards parsed batches to the pipeline.
     pub async fn stream_messages(
         &mut self,
         tx: tokio::sync::mpsc::Sender<MessageBatch<AlpacaMessage>>,

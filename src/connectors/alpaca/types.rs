@@ -1,7 +1,10 @@
+//! Data types emitted by the Alpaca market data websocket.
+
 use serde::Deserialize;
 
 use crate::core::Message;
 
+/// All message variants that may be received from the Alpaca feed.
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "T", rename_all = "lowercase")]
 pub enum AlpacaMessage {
@@ -48,6 +51,7 @@ pub enum AlpacaMessage {
 
 impl Message for AlpacaMessage {}
 
+/// OHLCV bar snapshot for a symbol.
 #[derive(Debug, Deserialize, Clone)]
 pub struct Bar {
     #[serde(rename = "S")]
@@ -79,15 +83,18 @@ pub struct Bar {
 }
 
 impl Bar {
+    /// Returns the absolute price move for the interval.
     pub fn price_change(&self) -> f64 {
         self.close - self.open
     }
 
+    /// Returns the price change in percent relative to the open.
     pub fn price_change_percent(&self) -> f64 {
         (self.price_change() / self.open) * 100.0
     }
 }
 
+/// Top-of-book quote update.
 #[derive(Debug, Deserialize, Clone)]
 pub struct Quote {
     #[serde(rename = "S")]
@@ -122,15 +129,18 @@ pub struct Quote {
 }
 
 impl Quote {
+    /// Returns the raw spread between ask and bid.
     pub fn spread(&self) -> f64 {
         self.ask_price - self.bid_price
     }
 
+    /// Returns the spread expressed in basis points.
     pub fn spread_bps(&self) -> f64 {
         (self.spread() / self.bid_price) * 10000.0
     }
 }
 
+/// Executed trade tick.
 #[derive(Debug, Deserialize, Clone)]
 pub struct Trade {
     #[serde(rename = "T")]

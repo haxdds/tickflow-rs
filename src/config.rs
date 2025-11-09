@@ -1,7 +1,8 @@
-// src/config.rs
+//! Application configuration helpers.
 use anyhow::{Result, anyhow};
 use std::env;
 
+/// Aggregated configuration required to run the Tickflow binary.
 pub struct AppConfig {
     pub database_url: String,
     pub alpaca_api_key: String,
@@ -11,6 +12,10 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    /// Builds an `AppConfig` by reading the expected environment variables.
+    ///
+    /// Provides defaults where reasonable (e.g. channel size) and returns an error when
+    /// a required variable is missing or malformed.
     pub fn from_env() -> Result<Self> {
         let channel_capacity = env::var("DATAFEED_CHANNEL_SIZE")
             .ok()

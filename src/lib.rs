@@ -1,3 +1,5 @@
+//! Tickflow runtime and integration helpers.
+
 pub mod config;
 pub mod core;
 pub mod pipeline;

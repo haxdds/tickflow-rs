@@ -1,3 +1,5 @@
+//! PostgreSQL-backed message sink for Alpaca market data.
+
 use std::future::Future;
 use std::pin::Pin;
 
@@ -10,6 +12,7 @@ use crate::core::{MessageBatch, MessageSink};
 
 use crate::connectors::alpaca::types::{AlpacaMessage, Bar, Quote, Trade};
 
+/// Thin Tokio Postgres wrapper that stores Alpaca messages.
 pub struct Database {
     client: Client,
 }
@@ -55,6 +58,7 @@ impl MessageSink<AlpacaMessage> for Database {
 }
 
 impl Database {
+    /// Inserts bar records individually, skipping conflicts.
     async fn insert_bars_batch(&self, bars: &[Bar]) -> Result<()> {
         for bar in bars {
             let timestamp = parse_timestamp(&bar.timestamp)?;
@@ -78,6 +82,7 @@ impl Database {
         Ok(())
     }
 
+    /// Inserts quote records individually, keeping the input order.
     async fn insert_quotes_batch(&self, quotes: &[Quote]) -> Result<()> {
         for quote in quotes {
             let timestamp = parse_timestamp(&quote.timestamp)?;
@@ -101,6 +106,7 @@ impl Database {
         Ok(())
     }
 
+    /// Inserts trade records individually, ignoring duplicates by ID.
     async fn insert_trades_batch(&self, trades: &[Trade]) -> Result<()> {
         for trade in trades {
             let timestamp = parse_timestamp(&trade.timestamp)?;
@@ -121,6 +127,7 @@ impl Database {
         Ok(())
     }
 
+    /// Connects to Postgres and spawns the connection task.
     pub async fn connect(connection_string: &str) -> Result<Self, tokio_postgres::Error> {
         info!("Connecting to database...");
 
@@ -137,6 +144,7 @@ impl Database {
         Ok(Database { client })
     }
 
+    /// Creates the tables required for storing market data if they are missing.
     pub async fn initialize_schema(&self) -> Result<(), tokio_postgres::Error> {
         info!("Initializing database schema...");
 
@@ -202,6 +210,7 @@ impl Database {
         Ok(())
     }
 
+    /// Inserts a single bar row, ignoring existing symbol/timestamp combinations.
     pub async fn insert_bar(
         &self,
         symbol: &str,
@@ -226,6 +235,7 @@ impl Database {
         Ok(())
     }
 
+    /// Inserts a single quote row.
     pub async fn insert_quote(
         &self,
         symbol: &str,
@@ -260,6 +270,7 @@ impl Database {
         Ok(())
     }
 
+    /// Inserts a single trade row, de-duplicating by trade ID and symbol.
     pub async fn insert_trade(
         &self,
         trade_id: i64,

@@ -1,12 +1,16 @@
+//! Message batches processor that dispatches to a sink.
+
 use std::sync::Arc;
 
 use crate::core::{Message, MessageBatch, MessageSink};
 
+/// Wraps a `MessageSink` and provides async batch processing.
 pub struct MessageProcessor<M: Message> {
     sink: Arc<dyn MessageSink<M>>,
 }
 
 impl<M: Message> MessageProcessor<M> {
+    /// Creates a processor for the given sink, boxing it for shared ownership.
     pub fn new<S>(sink: S) -> Self
     where
         S: MessageSink<M>,
@@ -16,6 +20,7 @@ impl<M: Message> MessageProcessor<M> {
         }
     }
 
+    /// Consumes messages from the provided receiver and forwards them to the sink.
     pub async fn process_messages(
         &self,
         mut rx: tokio::sync::mpsc::Receiver<MessageBatch<M>>,

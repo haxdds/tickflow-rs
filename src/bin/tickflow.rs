@@ -1,3 +1,5 @@
+//! Tickflow CLI entrypoint that wires Alpaca to Postgres.
+
 use anyhow::Result;
 use tickflow::config::AppConfig;
 use tickflow::connectors::alpaca::websocket::AlpacaWebSocketClient;
@@ -5,6 +7,7 @@ use tickflow::prelude::*;
 use tickflow::storage::Database;
 use tracing::Level;
 
+/// Boots the runtime, builds the data feed and awaits both pipeline tasks.
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();

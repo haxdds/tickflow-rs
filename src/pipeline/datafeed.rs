@@ -1,3 +1,5 @@
+//! Single-producer single-consumer pipeline orchestration.
+
 use crate::core::{Message, MessageBatch, MessageSink, MessageSource};
 use anyhow::Result;
 use tokio::sync::mpsc;
@@ -6,6 +8,7 @@ use tracing::error;
 
 use super::{MessageProcessor, TickflowBuilder};
 
+/// Connects a `MessageSource` to a `MessageProcessor` via a bounded Tokio channel.
 pub struct SPSCDataFeed<M, Src>
 where
     M: Message,
@@ -16,6 +19,7 @@ where
     channel_capacity: usize,
 }
 
+/// Task handles returned when an `SPSCDataFeed` is started.
 pub struct SPSCDataFeedHandles {
     pub source: JoinHandle<()>,
     pub processor: JoinHandle<()>,
@@ -26,6 +30,7 @@ where
     M: Message,
     Src: MessageSource<M>,
 {
+    /// Returns a builder for configuring and launching the data feed.
     pub fn builder<Sink>(source: Src, sink: Sink) -> TickflowBuilder<M, Src, Sink>
     where
         Sink: MessageSink<M>,
@@ -33,6 +38,7 @@ where
         TickflowBuilder::new(source, sink)
     }
 
+    /// Creates a feed with an explicit channel capacity.
     pub fn new<Sink>(source: Src, sink: Sink, channel_capacity: usize) -> Self
     where
         Sink: MessageSink<M>,
@@ -44,6 +50,7 @@ where
         }
     }
 
+    /// Spawns source and processor tasks and returns their join handles.
     pub async fn start(self) -> Result<SPSCDataFeedHandles> {
         let (tx, rx) = mpsc::channel::<MessageBatch<M>>(self.channel_capacity);
 
