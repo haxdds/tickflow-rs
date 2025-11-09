@@ -211,6 +211,7 @@ impl Database {
     }
 
     /// Inserts a single bar row, ignoring existing symbol/timestamp combinations.
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_bar(
         &self,
         symbol: &str,
@@ -236,6 +237,7 @@ impl Database {
     }
 
     /// Inserts a single quote row.
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_quote(
         &self,
         symbol: &str,
@@ -271,6 +273,7 @@ impl Database {
     }
 
     /// Inserts a single trade row, de-duplicating by trade ID and symbol.
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_trade(
         &self,
         trade_id: i64,

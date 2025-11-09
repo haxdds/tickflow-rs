@@ -40,12 +40,8 @@ impl MessageSource<AlpacaMessage> for AlpacaWebSocketClient {
         Box::pin(async move {
             self.connect().await?;
             self.authenticate().await?;
-            self.subscribe(
-                self.bars.clone(),
-                self.quotes.clone(),
-                self.trades.clone(),
-            )
-            .await?;
+            self.subscribe(self.bars.clone(), self.quotes.clone(), self.trades.clone())
+                .await?;
             self.stream_messages(tx).await?;
             Ok(())
         })
