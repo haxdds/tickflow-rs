@@ -82,21 +82,25 @@ fn test_parse_quote_message() {
     match msg {
         AlpacaMessage::Quote(quote) => {
             assert_eq!(quote.symbol, "TSLA");
-            // assert_eq!(quote.bid_exchange, Some("NASDAQ"));
+            assert_eq!(quote.bid_exchange.as_deref(), Some("NASDAQ"));
             assert_eq!(quote.bid_price, 250.10);
             assert_eq!(quote.bid_size, 100.0);
-            // assert_eq!(quote.ask_exchange, Some("NASDAQ"));
+            assert_eq!(quote.ask_exchange.as_deref(), Some("NASDAQ"));
             assert_eq!(quote.ask_price, 250.15);
             assert_eq!(quote.ask_size, 200.0);
-            // assert_eq!(quote.conditions, SomeVec::<String>::new());
-            // assert_eq!(quote.tape, Some("C"));
+            assert!(quote
+                .conditions
+                .as_ref()
+                .map(|c| c.is_empty())
+                .unwrap_or(false));
+            assert_eq!(quote.tape.as_deref(), Some("C"));
             assert_eq!(quote.timestamp, "2024-01-01T10:00:01Z");
 
             // Test Quote methods
             // 0.01_f64 just means the floating-point literal 0.01 as f64 ("type suffix").
             // You could use 0.01 without the _f64 because the types match in this context.
             assert!((quote.spread() - 0.05).abs() < 0.00001);
-            // assert!((quote.spread_bps() - 1.9976).abs() < 0.0001);
+            assert!((quote.spread_bps() - 1.9992).abs() < 0.0001);
         }
         _ => panic!("Expected Quote message"),
     }
@@ -147,6 +151,39 @@ fn test_parse_invalid_message_type() {
 
     let result = serde_json::from_str::<AlpacaMessage>(invalid_json);
     assert!(result.is_err());
+}
+
+#[test]
+fn test_subscription_defaults_are_empty() {
+    let json = r#"{"T":"subscription"}"#;
+    let msg = serde_json::from_str::<AlpacaMessage>(json).unwrap();
+
+    match msg {
+        AlpacaMessage::Subscription {
+            trades,
+            quotes,
+            bars,
+            orderbooks,
+            updated_bars,
+            daily_bars,
+            statuses,
+            lulds,
+            corrections,
+            cancel_errors,
+        } => {
+            assert!(trades.is_empty());
+            assert!(quotes.is_empty());
+            assert!(bars.is_empty());
+            assert!(orderbooks.is_empty());
+            assert!(updated_bars.is_empty());
+            assert!(daily_bars.is_empty());
+            assert!(statuses.is_empty());
+            assert!(lulds.is_empty());
+            assert!(corrections.is_empty());
+            assert!(cancel_errors.is_empty());
+        }
+        _ => panic!("Expected Subscription message"),
+    }
 }
 
 #[test]
