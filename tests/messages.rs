@@ -88,11 +88,13 @@ fn test_parse_quote_message() {
             assert_eq!(quote.ask_exchange.as_deref(), Some("NASDAQ"));
             assert_eq!(quote.ask_price, 250.15);
             assert_eq!(quote.ask_size, 200.0);
-            assert!(quote
-                .conditions
-                .as_ref()
-                .map(|c| c.is_empty())
-                .unwrap_or(false));
+            assert!(
+                quote
+                    .conditions
+                    .as_ref()
+                    .map(|c| c.is_empty())
+                    .unwrap_or(false)
+            );
             assert_eq!(quote.tape.as_deref(), Some("C"));
             assert_eq!(quote.timestamp, "2024-01-01T10:00:01Z");
 

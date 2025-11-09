@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
-use tokio::sync::{mpsc, Mutex};
+use anyhow::{Result, anyhow};
+use tokio::sync::{Mutex, mpsc};
 
 use tickflow::core::{Message, MessageBatch, MessageSink, MessageSource};
 use tickflow::pipeline::{MessageProcessor, SPSCDataFeed};
@@ -135,10 +135,7 @@ async fn tickflow_builder_start_processes_batches() {
 
     let batches = sink.handled_batches().await;
     assert_eq!(batches.len(), 2);
-    assert_eq!(
-        batches[0],
-        vec![TestMessage("alpha"), TestMessage("beta")]
-    );
+    assert_eq!(batches[0], vec![TestMessage("alpha"), TestMessage("beta")]);
     assert_eq!(batches[1], vec![TestMessage("gamma")]);
 }
 
@@ -194,4 +191,3 @@ async fn datafeed_completes_when_source_fails_midstream() {
     assert_eq!(batches.len(), 1);
     assert_eq!(batches[0], vec![TestMessage("only")]);
 }
-

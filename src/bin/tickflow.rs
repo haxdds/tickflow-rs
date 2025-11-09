@@ -21,6 +21,9 @@ async fn main() -> Result<()> {
         &config.alpaca_ws_url,
         &config.alpaca_api_key,
         &config.alpaca_api_secret,
+        &[],
+        &["ETH/USD"],
+        &[],
     );
 
     let handles = TickflowBuilder::new(websocket, database)
