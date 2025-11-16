@@ -4,7 +4,7 @@ version = "0.3.1-alpha"
 edition = "2024"
 
 [features]
-default = ["alpaca", "postgres"]
+default = ["alpaca", "postgres", "yahoo"]
 alpaca = [
     "tokio-tungstenite",
     "tungstenite",
@@ -16,6 +16,7 @@ postgres = [
     "tokio-postgres",
     "chrono",
 ]
+yahoo = ["yfinance-rs"]
 
 [dependencies]
 # Async runtime
@@ -44,3 +45,4 @@ tracing-subscriber = "0.3"
 
 futures-util = { version = "0.3.31", optional = true } 
 chrono = { version = "0.4.42", optional = true }
+yfinance-rs = { version = "0.7.2", optional = true }
