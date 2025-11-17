@@ -4,14 +4,12 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use anyhow::Result;
-use tokio_postgres::Client;
-use rust_decimal::prelude::ToPrimitive;
-use crate::core::Message;
 use crate::connectors::yahoo::types::YahooMessage;
 use crate::storage::postgres::DatabaseMessageHandler;
-use paft_domain::period::{Period};
-use chrono::NaiveDate;
+use anyhow::Result;
+use paft_domain::period::Period;
+use rust_decimal::prelude::ToPrimitive;
+use tokio_postgres::Client;
 pub struct YahooMessageHandler;
 
 impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
@@ -39,7 +37,7 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                 )
                 .await?;
 
-                client
+            client
                 .execute(
                     "CREATE TABLE IF NOT EXISTS quarterly_balance_sheets (
                         id SERIAL PRIMARY KEY,
@@ -58,7 +56,7 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                 )
                 .await?;
 
-                client
+            client
                 .execute(
                     "CREATE TABLE IF NOT EXISTS quarterly_cashflow_statements (
                         id SERIAL PRIMARY KEY,
@@ -89,28 +87,39 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                 match message {
                     YahooMessage::IncomeStatement(row) => {
                         let total_revenue = match row.inner.total_revenue {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue, // Skip this message if the value is missing
                         };
                         let gross_profit = match row.inner.gross_profit {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let operating_income = match row.inner.operating_income {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let net_income = match row.inner.net_income {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
-                        
 
                         let period_date = match &row.inner.period {
                             Period::Date(date) => {
                                 // Assuming date is already a NaiveDate or can be converted to one
-                                *date  // or date.clone() if needed
-                            },
+                                *date // or date.clone() if needed
+                            }
                             _ => continue,
                         };
 
@@ -142,23 +151,38 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                     }
                     YahooMessage::BalanceSheet(row) => {
                         let total_assets = match row.inner.total_assets {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let total_liabilities = match row.inner.total_liabilities {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let total_equity = match row.inner.total_equity {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let cash = match row.inner.cash {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let long_term_debt = match row.inner.long_term_debt {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let shares_outstanding = match row.inner.shares_outstanding {
@@ -167,9 +191,7 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                         };
 
                         let period_date = match &row.inner.period {
-                            Period::Date(date) => {
-                                *date
-                            },
+                            Period::Date(date) => *date,
                             _ => continue,
                         };
 
@@ -205,26 +227,36 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                     }
                     YahooMessage::Cashflow(row) => {
                         let operating_cashflow = match row.inner.operating_cashflow {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let capital_expenditures = match row.inner.capital_expenditures {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let free_cash_flow = match row.inner.free_cash_flow {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
                         let net_income = match row.inner.net_income {
-                            Some(val) => val.amount().to_f64().expect("Could not convert Decimal to f64"),
+                            Some(val) => val
+                                .amount()
+                                .to_f64()
+                                .expect("Could not convert Decimal to f64"),
                             None => continue,
                         };
 
                         let period_date = match &row.inner.period {
-                            Period::Date(date) => {
-                                *date
-                            },
+                            Period::Date(date) => *date,
                             _ => continue,
                         };
 
@@ -261,4 +293,5 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
             }
             Ok(())
         })
-    }}
+    }
+}

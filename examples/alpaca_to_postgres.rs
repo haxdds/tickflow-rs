@@ -5,14 +5,14 @@ async fn main() -> anyhow::Result<()> {
     use tickflow::connectors::alpaca::websocket::AlpacaWebSocketClient;
     use tickflow::prelude::*;
     use tickflow::storage::Database;
-    use tracing::Level;
     use tickflow::storage::postgres_handler::alpaca::AlpacaMessageHandler;
+    use tracing::Level;
 
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     dotenvy::dotenv().ok();
 
     let config = AppConfig::from_env()?;
-    
+
     let database = Database::connect(&config.database_url, Box::new(AlpacaMessageHandler)).await?;
     database.initialize_schema().await?;
 

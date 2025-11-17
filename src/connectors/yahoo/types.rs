@@ -1,7 +1,10 @@
-use crate::core::{Message};
-use serde::{Deserialize};
-use yfinance_rs::fundamentals::{Calendar, IncomeStatementRow as YIncomeStatementRow, BalanceSheetRow as YBalanceSheetRow, CashflowRow as YCashflowRow};
+use crate::core::Message;
+use serde::Deserialize;
 use std::fmt::Display;
+use yfinance_rs::fundamentals::{
+    BalanceSheetRow as YBalanceSheetRow, Calendar, CashflowRow as YCashflowRow,
+    IncomeStatementRow as YIncomeStatementRow,
+};
 
 /// Wraps an IncomeStatementRow with a symbol field.
 #[derive(Deserialize, Clone, Debug)]

@@ -18,7 +18,7 @@ pub trait DatabaseMessageHandler<M: Message>: Send + Sync + 'static {
         &self,
         client: Arc<Client>,
     ) -> Pin<Box<dyn Future<Output = Result<(), tokio_postgres::Error>> + Send>>;
-    
+
     /// Insert a batch of messages into the database.
     fn insert_batch(
         &self,
@@ -44,9 +44,7 @@ impl<M: Message> MessageSink<M> for Database<M> {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         let handler = &*self.handler;
         let client = Arc::clone(&self.client);
-        Box::pin(async move {
-            handler.insert_batch(client, batch).await
-        })
+        Box::pin(async move { handler.insert_batch(client, batch).await })
     }
 }
 
@@ -68,16 +66,18 @@ impl<M: Message> Database<M> {
 
         info!("Database connected successfully...");
 
-        Ok(Database { 
-            client: Arc::new(client), 
-            handler 
+        Ok(Database {
+            client: Arc::new(client),
+            handler,
         })
     }
 
     /// Creates the tables required for storing market data if they are missing.
     pub async fn initialize_schema(&self) -> Result<(), tokio_postgres::Error> {
         info!("Initializing database schema...");
-        self.handler.initialize_schema(Arc::clone(&self.client)).await?;
+        self.handler
+            .initialize_schema(Arc::clone(&self.client))
+            .await?;
         info!("Database schema initialized");
         Ok(())
     }
