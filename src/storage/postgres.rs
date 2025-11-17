@@ -10,27 +10,60 @@ use tracing::{error, info};
 
 use crate::core::{Message, MessageBatch, MessageSink};
 
-/// Trait for handling database operations specific to a message type.
+// Type aliases to reduce verbosity
+type AsyncResult<T> = Pin<Box<dyn Future<Output = Result<T>> + Send>>;
+type AsyncDbResult<T> = Pin<Box<dyn Future<Output = Result<T, tokio_postgres::Error>> + Send>>;
+
+/// Handles database operations for a specific message type.
 /// Each message type implements this to define its schema and insertion logic.
 pub trait DatabaseMessageHandler<M: Message>: Send + Sync + 'static {
     /// Initialize the database schema for this message type.
-    fn initialize_schema(
-        &self,
-        client: Arc<Client>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), tokio_postgres::Error>> + Send>>;
+    fn initialize_schema(&self, client: Arc<Client>) -> AsyncDbResult<()>;
 
     /// Insert a batch of messages into the database.
-    fn insert_batch(
-        &self,
-        client: Arc<Client>,
-        batch: Vec<M>,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+    fn insert_batch(&self, client: Arc<Client>, batch: Vec<M>) -> AsyncResult<()>;
 }
 
-/// Generic PostgreSQL database sink that can handle any message type.
+/// PostgreSQL database sink for market data messages.
 pub struct Database<M: Message> {
     client: Arc<Client>,
     handler: Box<dyn DatabaseMessageHandler<M>>,
+}
+
+impl<M: Message> Database<M> {
+    /// Connect to PostgreSQL and return a new Database instance.
+    pub async fn connect(
+        connection_string: &str,
+        handler: Box<dyn DatabaseMessageHandler<M>>,
+    ) -> Result<Self, tokio_postgres::Error> {
+        info!("Connecting to database...");
+
+        let (client, connection) = tokio_postgres::connect(connection_string, NoTls).await?;
+
+        // Spawn connection task to handle errors
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                error!("Database connection error: {}", e);
+            }
+        });
+
+        info!("Database connected successfully");
+
+        Ok(Self {
+            client: Arc::new(client),
+            handler,
+        })
+    }
+
+    /// Initialize the database schema for the message type.
+    pub async fn initialize_schema(&self) -> Result<(), tokio_postgres::Error> {
+        info!("Initializing database schema...");
+        self.handler
+            .initialize_schema(Arc::clone(&self.client))
+            .await?;
+        info!("Database schema initialized");
+        Ok(())
+    }
 }
 
 impl<M: Message> MessageSink<M> for Database<M> {
@@ -42,48 +75,14 @@ impl<M: Message> MessageSink<M> for Database<M> {
         &'a self,
         batch: MessageBatch<M>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        let handler = &*self.handler;
         let client = Arc::clone(&self.client);
-        Box::pin(async move { handler.insert_batch(client, batch).await })
-    }
-}
-
-impl<M: Message> Database<M> {
-    /// Connects to Postgres and spawns the connection task.
-    pub async fn connect(
-        connection_string: &str,
-        handler: Box<dyn DatabaseMessageHandler<M>>,
-    ) -> Result<Self, tokio_postgres::Error> {
-        info!("Connecting to database...");
-
-        let (client, connection) = tokio_postgres::connect(connection_string, NoTls).await?;
-
-        tokio::spawn(async move {
-            if let Err(e) = connection.await {
-                error!("Database connection error: {}", e);
-            }
-        });
-
-        info!("Database connected successfully...");
-
-        Ok(Database {
-            client: Arc::new(client),
-            handler,
+        Box::pin(async move {
+            self.handler.insert_batch(client, batch).await
         })
     }
-
-    /// Creates the tables required for storing market data if they are missing.
-    pub async fn initialize_schema(&self) -> Result<(), tokio_postgres::Error> {
-        info!("Initializing database schema...");
-        self.handler
-            .initialize_schema(Arc::clone(&self.client))
-            .await?;
-        info!("Database schema initialized");
-        Ok(())
-    }
 }
 
-// Handler implementations module
+// Re-export message handlers
 #[cfg(feature = "postgres")]
 pub use crate::storage::postgres_handler::alpaca::AlpacaMessageHandler;
 #[cfg(feature = "postgres")]

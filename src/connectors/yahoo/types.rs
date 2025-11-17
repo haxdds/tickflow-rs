@@ -1,8 +1,9 @@
 use crate::core::Message;
 use serde::Deserialize;
-use std::fmt::Display;
 use yfinance_rs::fundamentals::{
-    BalanceSheetRow as YBalanceSheetRow, Calendar, CashflowRow as YCashflowRow,
+    BalanceSheetRow as YBalanceSheetRow,
+    Calendar,
+    CashflowRow as YCashflowRow,
     IncomeStatementRow as YIncomeStatementRow,
 };
 
@@ -30,8 +31,7 @@ pub struct CashflowRow {
     pub inner: YCashflowRow,
 }
 
-/// Optionally, you can also wrap Calendar, but if not required, don't.
-/// If you do:
+/// Wraps a Calendar with a symbol field.
 #[derive(Deserialize, Clone, Debug)]
 pub struct CalendarRow {
     pub symbol: String,
@@ -48,14 +48,3 @@ pub enum YahooMessage {
 }
 
 impl Message for YahooMessage {}
-
-impl Display for YahooMessage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            YahooMessage::Calendar(cal) => write!(f, "Calendar: {:?}", cal),
-            YahooMessage::IncomeStatement(row) => write!(f, "IncomeStatement: {:?}", row),
-            YahooMessage::BalanceSheet(row) => write!(f, "BalanceSheet: {:?}", row),
-            YahooMessage::Cashflow(row) => write!(f, "Cashflow: {:?}", row),
-        }
-    }
-}

@@ -8,8 +8,10 @@ use crate::connectors::yahoo::types::YahooMessage;
 use crate::storage::postgres::DatabaseMessageHandler;
 use anyhow::Result;
 use paft_domain::period::Period;
+use paft_money::money::Money;
 use rust_decimal::prelude::ToPrimitive;
 use tokio_postgres::Client;
+
 pub struct YahooMessageHandler;
 
 impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
@@ -19,7 +21,6 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
     ) -> Pin<Box<dyn Future<Output = Result<(), tokio_postgres::Error>> + Send>> {
         Box::pin(async move {
             // Create tables for Yahoo finance data
-            // Adjust schema based on actual IncomeStatementRow, BalanceSheetRow, Calendar structures
             client
                 .execute(
                     "CREATE TABLE IF NOT EXISTS quarterly_income_statements (
@@ -86,205 +87,13 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
             for message in batch {
                 match message {
                     YahooMessage::IncomeStatement(row) => {
-                        let total_revenue = match row.inner.total_revenue {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue, // Skip this message if the value is missing
-                        };
-                        let gross_profit = match row.inner.gross_profit {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let operating_income = match row.inner.operating_income {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let net_income = match row.inner.net_income {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-
-                        let period_date = match &row.inner.period {
-                            Period::Date(date) => {
-                                // Assuming date is already a NaiveDate or can be converted to one
-                                *date // or date.clone() if needed
-                            }
-                            _ => continue,
-                        };
-
-                        if let Err(e) = client.execute(
-                            "INSERT INTO quarterly_income_statements 
-                                (symbol, period_date, total_revenue, gross_profit, operating_income, net_income)
-                            VALUES ($1, $2, $3, $4, $5, $6)
-                            ON CONFLICT (symbol, period_date) DO NOTHING",
-                            &[
-                                &row.symbol,
-                                &period_date,  // Pass as string, PostgreSQL will parse it
-                                &total_revenue,
-                                &gross_profit,
-                                &operating_income,
-                                &net_income
-                            ]
-                        ).await {
-                            tracing::error!(
-                                "Failed to insert income_statement for symbol: {}, period_date: {}, total_revenue: {}, gross_profit: {}, operating_income: {}, net_income: {}. Error: {}",
-                                &row.symbol,
-                                period_date,
-                                total_revenue,
-                                gross_profit,
-                                operating_income,
-                                net_income,
-                                e
-                            );
-                        }
+                        Self::insert_income_statement(&client, row).await;
                     }
                     YahooMessage::BalanceSheet(row) => {
-                        let total_assets = match row.inner.total_assets {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let total_liabilities = match row.inner.total_liabilities {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let total_equity = match row.inner.total_equity {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let cash = match row.inner.cash {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let long_term_debt = match row.inner.long_term_debt {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let shares_outstanding = match row.inner.shares_outstanding {
-                            Some(val) => val,
-                            None => continue,
-                        };
-
-                        let period_date = match &row.inner.period {
-                            Period::Date(date) => *date,
-                            _ => continue,
-                        };
-
-                        if let Err(e) = client.execute(
-                            "INSERT INTO quarterly_balance_sheets 
-                                (symbol, period_date, total_assets, total_liabilities, total_equity, cash, long_term_debt, shares_outstanding)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                            ON CONFLICT (symbol, period_date) DO NOTHING",
-                            &[
-                                &row.symbol,
-                                &period_date,
-                                &total_assets,
-                                &total_liabilities,
-                                &total_equity,
-                                &cash,
-                                &long_term_debt,
-                                &(shares_outstanding as i64),
-                            ]
-                        ).await {
-                            tracing::error!(
-                                "Failed to insert balance_sheet for symbol: {}, period_date: {}, total_assets: {}, total_liabilities: {}, total_equity: {}, cash: {}, long_term_debt: {}, shares_outstanding: {}. Error: {}",
-                                &row.symbol,
-                                period_date,
-                                total_assets,
-                                total_liabilities,
-                                total_equity,
-                                cash,
-                                long_term_debt,
-                                shares_outstanding,
-                                e
-                            );
-                        }
+                        Self::insert_balance_sheet(&client, row).await;
                     }
                     YahooMessage::Cashflow(row) => {
-                        let operating_cashflow = match row.inner.operating_cashflow {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let capital_expenditures = match row.inner.capital_expenditures {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let free_cash_flow = match row.inner.free_cash_flow {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-                        let net_income = match row.inner.net_income {
-                            Some(val) => val
-                                .amount()
-                                .to_f64()
-                                .expect("Could not convert Decimal to f64"),
-                            None => continue,
-                        };
-
-                        let period_date = match &row.inner.period {
-                            Period::Date(date) => *date,
-                            _ => continue,
-                        };
-
-                        if let Err(e) = client.execute(
-                            "INSERT INTO quarterly_cashflow_statements 
-                                (symbol, period_date, operating_cashflow, capital_expenditures, free_cash_flow, net_income)
-                            VALUES ($1, $2, $3, $4, $5, $6)
-                            ON CONFLICT (symbol, period_date) DO NOTHING",
-                            &[
-                                &row.symbol,
-                                &period_date,
-                                &operating_cashflow,
-                                &capital_expenditures,
-                                &free_cash_flow,
-                                &net_income
-                            ]
-                        ).await {
-                            tracing::error!(
-                                "Failed to insert cashflow for symbol: {}, period_date: {}, operating_cashflow: {}, capital_expenditures: {}, free_cash_flow: {}, net_income: {}. Error: {}",
-                                &row.symbol,
-                                period_date,
-                                operating_cashflow,
-                                capital_expenditures,
-                                free_cash_flow,
-                                net_income,
-                                e
-                            );
-                        }
+                        Self::insert_cashflow(&client, row).await;
                     }
                     YahooMessage::Calendar(_cal) => {
                         // Calendar is not handled for now.
@@ -293,5 +102,174 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
             }
             Ok(())
         })
+    }
+}
+
+impl YahooMessageHandler {
+    /// Extract a Decimal amount to f64, returning None if missing
+    fn extract_amount(amount: Option<&Money>) -> Option<f64> {
+        amount?.amount().to_f64()
+    }
+
+    /// Extract period date from Period enum
+    fn extract_period_date(period: &Period) -> Option<chrono::NaiveDate> {
+        match period {
+            Period::Date(date) => Some(*date),
+            _ => None,
+        }
+    }
+
+    async fn insert_income_statement(
+        client: &Client,
+        row: crate::connectors::yahoo::types::IncomeStatementRow,
+    ) {
+        let period_date = match Self::extract_period_date(&row.inner.period) {
+            Some(date) => date,
+            None => {
+                tracing::warn!("Skipping income statement for {}: invalid period", row.symbol);
+                return;
+            }
+        };
+
+        let total_revenue = match Self::extract_amount(row.inner.total_revenue.as_ref()) {
+            Some(val) => val,
+            None => {
+                tracing::warn!("Skipping income statement for {}: missing total_revenue", row.symbol);
+                return;
+            }
+        };
+
+        let gross_profit = Self::extract_amount(row.inner.gross_profit.as_ref());
+        let operating_income = Self::extract_amount(row.inner.operating_income.as_ref());
+        let net_income = Self::extract_amount(row.inner.net_income.as_ref());
+
+        if let Err(e) = client
+            .execute(
+                "INSERT INTO quarterly_income_statements 
+                    (symbol, period_date, total_revenue, gross_profit, operating_income, net_income)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (symbol, period_date) DO NOTHING",
+                &[
+                    &row.symbol,
+                    &period_date,
+                    &total_revenue,
+                    &gross_profit,
+                    &operating_income,
+                    &net_income,
+                ],
+            )
+            .await
+        {
+            tracing::error!(
+                "Failed to insert income statement for {} ({}): {}",
+                row.symbol,
+                period_date,
+                e
+            );
+        }
+    }
+
+    async fn insert_balance_sheet(
+        client: &Client,
+        row: crate::connectors::yahoo::types::BalanceSheetRow,
+    ) {
+        let period_date = match Self::extract_period_date(&row.inner.period) {
+            Some(date) => date,
+            None => {
+                tracing::warn!("Skipping balance sheet for {}: invalid period", row.symbol);
+                return;
+            }
+        };
+
+        let total_assets = match Self::extract_amount(row.inner.total_assets.as_ref()) {
+            Some(val) => val,
+            None => {
+                tracing::warn!("Skipping balance sheet for {}: missing total_assets", row.symbol);
+                return;
+            }
+        };
+
+        let total_liabilities = Self::extract_amount(row.inner.total_liabilities.as_ref());
+        let total_equity = Self::extract_amount(row.inner.total_equity.as_ref());
+        let cash = Self::extract_amount(row.inner.cash.as_ref());
+        let long_term_debt = Self::extract_amount(row.inner.long_term_debt.as_ref());
+        let shares_outstanding = row.inner.shares_outstanding;
+
+        if let Err(e) = client
+            .execute(
+                "INSERT INTO quarterly_balance_sheets 
+                    (symbol, period_date, total_assets, total_liabilities, total_equity, cash, long_term_debt, shares_outstanding)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (symbol, period_date) DO NOTHING",
+                &[
+                    &row.symbol,
+                    &period_date,
+                    &total_assets,
+                    &total_liabilities,
+                    &total_equity,
+                    &cash,
+                    &long_term_debt,
+                    &(shares_outstanding.map(|v| v as i64)),
+                ],
+            )
+            .await
+        {
+            tracing::error!(
+                "Failed to insert balance sheet for {} ({}): {}",
+                row.symbol,
+                period_date,
+                e
+            );
+        }
+    }
+
+    async fn insert_cashflow(
+        client: &Client,
+        row: crate::connectors::yahoo::types::CashflowRow,
+    ) {
+        let period_date = match Self::extract_period_date(&row.inner.period) {
+            Some(date) => date,
+            None => {
+                tracing::warn!("Skipping cashflow for {}: invalid period", row.symbol);
+                return;
+            }
+        };
+
+        let operating_cashflow = match Self::extract_amount(row.inner.operating_cashflow.as_ref()) {
+            Some(val) => val,
+            None => {
+                tracing::warn!("Skipping cashflow for {}: missing operating_cashflow", row.symbol);
+                return;
+            }
+        };
+
+        let capital_expenditures = Self::extract_amount(row.inner.capital_expenditures.as_ref());
+        let free_cash_flow = Self::extract_amount(row.inner.free_cash_flow.as_ref());
+        let net_income = Self::extract_amount(row.inner.net_income.as_ref());
+
+        if let Err(e) = client
+            .execute(
+                "INSERT INTO quarterly_cashflow_statements 
+                    (symbol, period_date, operating_cashflow, capital_expenditures, free_cash_flow, net_income)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (symbol, period_date) DO NOTHING",
+                &[
+                    &row.symbol,
+                    &period_date,
+                    &operating_cashflow,
+                    &capital_expenditures,
+                    &free_cash_flow,
+                    &net_income,
+                ],
+            )
+            .await
+        {
+            tracing::error!(
+                "Failed to insert cashflow for {} ({}): {}",
+                row.symbol,
+                period_date,
+                e
+            );
+        }
     }
 }

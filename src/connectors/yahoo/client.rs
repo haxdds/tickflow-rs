@@ -5,8 +5,9 @@ use crate::{
 };
 use std::pin::Pin;
 use tokio::time::{Duration, sleep};
-use tracing::{debug, error};
-use yfinance_rs::{Ticker, YfClient, YfError};
+use tracing::{debug};
+use yfinance_rs::{Ticker, YfClient};
+
 pub struct YahooClient {
     client: YfClient,
     symbols: Vec<String>,
@@ -19,32 +20,10 @@ impl MessageSource<YahooMessage> for YahooClient {
         tx: tokio::sync::mpsc::Sender<MessageBatch<YahooMessage>>,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'a>> {
         Box::pin(async move {
-            // Now fetch income statements for each symbol
             for symbol in &self.symbols {
-                if let Err(err) = self
-                    .fetch_ticker_quarterly_income_stmt(symbol, tx.clone())
-                    .await
-                {
-                    error!("Failed to fetch income statement for {}: {}", symbol, err);
-                }
-                sleep(Duration::from_millis(self.timeout_ms)).await;
-                if let Err(err) = self
-                    .fetch_ticker_quarterly_balance_sheet(symbol, tx.clone())
-                    .await
-                {
-                    error!("Failed to fetch income statement for {}: {}", symbol, err);
-                }
-                sleep(Duration::from_millis(self.timeout_ms)).await;
-                if let Err(err) = self
-                    .fetch_ticker_quarterly_cashflow(symbol, tx.clone())
-                    .await
-                {
-                    error!("Failed to fetch income statement for {}: {}", symbol, err);
-                }
-                // Throttle requests to avoid rate limiting
+                self.fetch_all_statements(symbol, tx.clone()).await?;
                 sleep(Duration::from_millis(self.timeout_ms)).await;
             }
-
             Ok(())
         })
     }
@@ -59,87 +38,93 @@ impl YahooClient {
         }
     }
 
-    pub async fn fetch_ticker_quarterly_income_stmt(
+    async fn fetch_all_statements(
         &self,
         symbol: &str,
         tx: tokio::sync::mpsc::Sender<MessageBatch<YahooMessage>>,
-    ) -> Result<(), YfError> {
-        debug!("Fetching income data for {symbol}");
-        let ticker = Ticker::new(&self.client, symbol);
-        match ticker.quarterly_income_stmt(None).await {
-            Ok(stmt) => {
-                let messages: Vec<YahooMessage> = stmt
-                    .into_iter()
-                    .map(|row| {
-                        YahooMessage::IncomeStatement(IncomeStatementRow {
-                            symbol: (symbol.to_string()),
-                            inner: (row),
-                        })
-                    })
-                    .collect();
-                // debug!(messages);
-                let _ = tx.send(messages).await;
-            }
-            Err(err) => {
-                error!("error! {err}");
-            }
-        };
+    ) -> anyhow::Result<()> {
+        self.fetch_income_statement(symbol, tx.clone()).await?;
+        sleep(Duration::from_millis(self.timeout_ms)).await;
+        
+        self.fetch_balance_sheet(symbol, tx.clone()).await?;
+        sleep(Duration::from_millis(self.timeout_ms)).await;
+        
+        self.fetch_cashflow(symbol, tx.clone()).await?;
         Ok(())
     }
 
-    pub async fn fetch_ticker_quarterly_balance_sheet(
+    async fn fetch_income_statement(
         &self,
         symbol: &str,
         tx: tokio::sync::mpsc::Sender<MessageBatch<YahooMessage>>,
-    ) -> Result<(), YfError> {
+    ) -> anyhow::Result<()> {
+        debug!("Fetching income statement data for {symbol}");
+        let ticker = Ticker::new(&self.client, symbol);
+        let stmt = ticker.quarterly_income_stmt(None).await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch income statement for {symbol}: {e}"))?;
+        
+        let messages: Vec<YahooMessage> = stmt
+            .into_iter()
+            .map(|row| {
+                YahooMessage::IncomeStatement(IncomeStatementRow {
+                    symbol: symbol.to_string(),
+                    inner: row,
+                })
+            })
+            .collect();
+        
+        tx.send(messages).await
+            .map_err(|e| anyhow::anyhow!("Failed to send income statement messages: {e}"))?;
+        Ok(())
+    }
+
+    async fn fetch_balance_sheet(
+        &self,
+        symbol: &str,
+        tx: tokio::sync::mpsc::Sender<MessageBatch<YahooMessage>>,
+    ) -> anyhow::Result<()> {
         debug!("Fetching balance sheet data for {symbol}");
         let ticker = Ticker::new(&self.client, symbol);
-        match ticker.quarterly_balance_sheet(None).await {
-            Ok(stmt) => {
-                let messages: Vec<YahooMessage> = stmt
-                    .into_iter()
-                    .map(|row| {
-                        YahooMessage::BalanceSheet(BalanceSheetRow {
-                            symbol: (symbol.to_string()),
-                            inner: (row),
-                        })
-                    })
-                    .collect();
-                // debug!(messages);
-                let _ = tx.send(messages).await;
-            }
-            Err(err) => {
-                error!("error! {err}");
-            }
-        };
+        let stmt = ticker.quarterly_balance_sheet(None).await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch balance sheet for {symbol}: {e}"))?;
+        
+        let messages: Vec<YahooMessage> = stmt
+            .into_iter()
+            .map(|row| {
+                YahooMessage::BalanceSheet(BalanceSheetRow {
+                    symbol: symbol.to_string(),
+                    inner: row,
+                })
+            })
+            .collect();
+        
+        tx.send(messages).await
+            .map_err(|e| anyhow::anyhow!("Failed to send balance sheet messages: {e}"))?;
         Ok(())
     }
 
-    pub async fn fetch_ticker_quarterly_cashflow(
+    async fn fetch_cashflow(
         &self,
         symbol: &str,
         tx: tokio::sync::mpsc::Sender<MessageBatch<YahooMessage>>,
-    ) -> Result<(), YfError> {
+    ) -> anyhow::Result<()> {
         debug!("Fetching cashflow data for {symbol}");
         let ticker = Ticker::new(&self.client, symbol);
-        match ticker.quarterly_cashflow(None).await {
-            Ok(stmt) => {
-                let messages: Vec<YahooMessage> = stmt
-                    .into_iter()
-                    .map(|row| {
-                        YahooMessage::Cashflow(CashflowRow {
-                            symbol: (symbol.to_string()),
-                            inner: (row),
-                        })
-                    })
-                    .collect();
-                // debug!(messages);
-                let _ = tx.send(messages).await;
-            }
-            Err(err) => {
-                error!("error! {err}");
-            }
-        };
+        let stmt = ticker.quarterly_cashflow(None).await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch cashflow for {symbol}: {e}"))?;
+        
+        let messages: Vec<YahooMessage> = stmt
+            .into_iter()
+            .map(|row| {
+                YahooMessage::Cashflow(CashflowRow {
+                    symbol: symbol.to_string(),
+                    inner: row,
+                })
+            })
+            .collect();
+        
+        tx.send(messages).await
+            .map_err(|e| anyhow::anyhow!("Failed to send cashflow messages: {e}"))?;
         Ok(())
     }
 }
