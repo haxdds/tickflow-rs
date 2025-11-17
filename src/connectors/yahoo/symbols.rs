@@ -15,11 +15,9 @@ pub async fn load_symbols(path: String) -> Result<Vec<String>> {
             continue;
         }
 
-        // Extract first column (symbol)
-        if let Some(symbol) = line.split(',').next().map(|s| s.trim()) {
-            if !symbol.is_empty() {
-                symbols.push(symbol.to_string());
-            }
+        // Extract first column (symbol) and push if not empty
+        if let Some(symbol) = line.split(',').next().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+            symbols.push(symbol.to_string());
         }
     }
 
