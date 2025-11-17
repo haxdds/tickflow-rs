@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub alpaca_api_secret: String,
     pub alpaca_ws_url: String,
     pub channel_capacity: usize,
+    pub symbols_path: String,
 }
 
 impl AppConfig {
@@ -42,12 +43,18 @@ impl AppConfig {
             Err(_) => return Err(anyhow!("ALPACA_WS_URL must be set")),
         };
 
+        let symbols_path = match env::var("SYMBOLS_PATH") {
+            Ok(val) => val,
+            Err(_) => return Err(anyhow!("SYMBOLS_PATH must be set")),
+        };
+
         Ok(Self {
             database_url,
             alpaca_api_key,
             alpaca_api_secret,
             alpaca_ws_url,
             channel_capacity,
+            symbols_path,
         })
     }
 }

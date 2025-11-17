@@ -27,6 +27,7 @@ impl<M: Message> MessageProcessor<M> {
     ) -> anyhow::Result<()> {
         tracing::info!("Message processor started ({})", self.sink.name());
         while let Some(batch) = rx.recv().await {
+            tracing::debug!("Handling batch");
             if let Err(err) = self.sink.handle_batch(batch).await {
                 tracing::warn!("{} sink error: {err}", self.sink.name());
             }

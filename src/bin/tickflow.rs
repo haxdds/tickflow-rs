@@ -5,6 +5,7 @@ use tickflow::config::AppConfig;
 use tickflow::connectors::alpaca::websocket::AlpacaWebSocketClient;
 use tickflow::prelude::*;
 use tickflow::storage::Database;
+use tickflow::storage::postgres::AlpacaMessageHandler;
 use tracing::Level;
 
 /// Boots the runtime, builds the data feed and awaits both pipeline tasks.
@@ -14,7 +15,7 @@ async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
     let config = AppConfig::from_env()?;
-    let database = Database::connect(&config.database_url).await?;
+    let database = Database::connect(&config.database_url, Box::new(AlpacaMessageHandler)).await?;
     database.initialize_schema().await?;
 
     let websocket = AlpacaWebSocketClient::new(
