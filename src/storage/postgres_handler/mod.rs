@@ -1,4 +1,4 @@
-//! External data source integrations.
+//! PostgreSQL handler implementations for different message types.
 
 #[cfg(feature = "alpaca")]
 pub mod alpaca;

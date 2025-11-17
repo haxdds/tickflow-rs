@@ -4,7 +4,7 @@ version = "0.3.1-alpha"
 edition = "2024"
 
 [features]
-default = ["alpaca", "postgres"]
+default = ["alpaca", "postgres", "yahoo"]
 alpaca = [
     "tokio-tungstenite",
     "tungstenite",
@@ -16,6 +16,7 @@ postgres = [
     "tokio-postgres",
     "chrono",
 ]
+yahoo = ["yfinance-rs"]
 
 [dependencies]
 # Async runtime
@@ -44,3 +45,9 @@ tracing-subscriber = "0.3"
 
 futures-util = { version = "0.3.31", optional = true } 
 chrono = { version = "0.4.42", optional = true }
+yfinance-rs = { version = "0.7.2", optional = true }
+rust_decimal = "1.39.0"
+
+paft = { git = "https://github.com/paft-rs/paft", rev = "87b7e5a509db3c546ff83c2da46a62d35c0c3865", features = ["market", "fundamentals", "domain", "aggregates"] }
+paft-domain = "0.7.1"
+paft-money = "0.7.1"
