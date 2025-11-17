@@ -16,7 +16,12 @@ pub async fn load_symbols(path: String) -> Result<Vec<String>> {
         }
 
         // Extract first column (symbol) and push if not empty
-        if let Some(symbol) = line.split(',').next().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        if let Some(symbol) = line
+            .split(',')
+            .next()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+        {
             symbols.push(symbol.to_string());
         }
     }
