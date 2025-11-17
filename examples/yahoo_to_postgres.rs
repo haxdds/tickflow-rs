@@ -5,7 +5,7 @@ async fn main() -> anyhow::Result<()> {
         config::AppConfig,
         connectors::yahoo::YahooClient,
         pipeline::TickflowBuilder,
-        storage::{postgres_handler::yahoo::YahooMessageHandler, Database},
+        storage::{Database, postgres_handler::yahoo::YahooMessageHandler},
     };
     use tracing::Level;
 

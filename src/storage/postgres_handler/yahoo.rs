@@ -126,7 +126,10 @@ impl YahooMessageHandler {
         let period_date = match Self::extract_period_date(&row.inner.period) {
             Some(date) => date,
             None => {
-                tracing::warn!("Skipping income statement for {}: invalid period", row.symbol);
+                tracing::warn!(
+                    "Skipping income statement for {}: invalid period",
+                    row.symbol
+                );
                 return;
             }
         };
@@ -134,7 +137,10 @@ impl YahooMessageHandler {
         let total_revenue = match Self::extract_amount(row.inner.total_revenue.as_ref()) {
             Some(val) => val,
             None => {
-                tracing::warn!("Skipping income statement for {}: missing total_revenue", row.symbol);
+                tracing::warn!(
+                    "Skipping income statement for {}: missing total_revenue",
+                    row.symbol
+                );
                 return;
             }
         };
@@ -184,7 +190,10 @@ impl YahooMessageHandler {
         let total_assets = match Self::extract_amount(row.inner.total_assets.as_ref()) {
             Some(val) => val,
             None => {
-                tracing::warn!("Skipping balance sheet for {}: missing total_assets", row.symbol);
+                tracing::warn!(
+                    "Skipping balance sheet for {}: missing total_assets",
+                    row.symbol
+                );
                 return;
             }
         };
@@ -223,10 +232,7 @@ impl YahooMessageHandler {
         }
     }
 
-    async fn insert_cashflow(
-        client: &Client,
-        row: crate::connectors::yahoo::types::CashflowRow,
-    ) {
+    async fn insert_cashflow(client: &Client, row: crate::connectors::yahoo::types::CashflowRow) {
         let period_date = match Self::extract_period_date(&row.inner.period) {
             Some(date) => date,
             None => {
@@ -238,7 +244,10 @@ impl YahooMessageHandler {
         let operating_cashflow = match Self::extract_amount(row.inner.operating_cashflow.as_ref()) {
             Some(val) => val,
             None => {
-                tracing::warn!("Skipping cashflow for {}: missing operating_cashflow", row.symbol);
+                tracing::warn!(
+                    "Skipping cashflow for {}: missing operating_cashflow",
+                    row.symbol
+                );
                 return;
             }
         };

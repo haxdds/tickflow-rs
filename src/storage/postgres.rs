@@ -76,9 +76,7 @@ impl<M: Message> MessageSink<M> for Database<M> {
         batch: MessageBatch<M>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         let client = Arc::clone(&self.client);
-        Box::pin(async move {
-            self.handler.insert_batch(client, batch).await
-        })
+        Box::pin(async move { self.handler.insert_batch(client, batch).await })
     }
 }
 

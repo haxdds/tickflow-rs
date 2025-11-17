@@ -1,9 +1,7 @@
 use crate::core::Message;
 use serde::Deserialize;
 use yfinance_rs::fundamentals::{
-    BalanceSheetRow as YBalanceSheetRow,
-    Calendar,
-    CashflowRow as YCashflowRow,
+    BalanceSheetRow as YBalanceSheetRow, Calendar, CashflowRow as YCashflowRow,
     IncomeStatementRow as YIncomeStatementRow,
 };
 
