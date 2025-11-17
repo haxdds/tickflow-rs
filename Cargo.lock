@@ -2366,6 +2366,7 @@ dependencies = [
  "futures-util",
  "paft 0.8.0",
  "paft-domain 0.7.1",
+ "paft-money 0.7.1",
  "rust_decimal",
  "serde",
  "serde_json",

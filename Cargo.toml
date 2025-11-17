@@ -50,3 +50,4 @@ rust_decimal = "1.39.0"
 
 paft = { git = "https://github.com/paft-rs/paft", rev = "87b7e5a509db3c546ff83c2da46a62d35c0c3865", features = ["market", "fundamentals", "domain", "aggregates"] }
 paft-domain = "0.7.1"
+paft-money = "0.7.1"
