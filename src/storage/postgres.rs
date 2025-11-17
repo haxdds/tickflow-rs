@@ -32,9 +32,9 @@ pub struct Database<M: Message> {
 
 impl<M: Message> Database<M> {
     /// Connect to PostgreSQL and return a new Database instance.
-    pub async fn connect(
+    pub async fn connect<T: DatabaseMessageHandler<M>>(
         connection_string: &str,
-        handler: Box<dyn DatabaseMessageHandler<M>>,
+        handler: T,
     ) -> Result<Self, tokio_postgres::Error> {
         info!("Connecting to database...");
 
@@ -51,7 +51,7 @@ impl<M: Message> Database<M> {
 
         Ok(Self {
             client: Arc::new(client),
-            handler,
+            handler: Box::new(handler),
         })
     }
 

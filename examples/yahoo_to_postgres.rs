@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_env()?;
 
     // Setup database connection and schema
-    let database = Database::connect(&config.database_url, Box::new(YahooMessageHandler)).await?;
+    let database = Database::connect(&config.database_url, YahooMessageHandler).await?;
     database.initialize_schema().await?;
 
     // Configure data source

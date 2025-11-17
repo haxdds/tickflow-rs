@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
     let config = AppConfig::from_env()?;
-    let database = Database::connect(&config.database_url, Box::new(AlpacaMessageHandler)).await?;
+    let database = Database::connect(&config.database_url, AlpacaMessageHandler).await?;
     database.initialize_schema().await?;
 
     let websocket = AlpacaWebSocketClient::new(
