@@ -1,10 +1,10 @@
 # Tickflow
 
-Tickflow is an async-first data pipeline for streaming market data into downstream systems. It ships with an Alpaca Market Data websocket source and a PostgreSQL sink wired together with a bounded single-producer/single-consumer (SPSC) channel so you can ingest ticks with backpressure-aware processing.
+Tickflow is an async-first data pipeline for streaming market data into downstream systems. It ships with Alpaca Market Data websocket and Yahoo Finance sources, plus a PostgreSQL sink wired together with a bounded single-producer/single-consumer (SPSC) channel so you can ingest ticks with backpressure-aware processing.
 
 ## Features
 
-- Integrates directly with Alpaca's streaming API using a resilient Tokio/WebSocket client.
+- Integrates with Alpaca's streaming API and Yahoo Finance using resilient async clients.
 - Persists bars, quotes, and trades to PostgreSQL with schema bootstrapping baked in.
 - Fluent builder (`TickflowBuilder`) for composing sources and sinks with configurable channel sizing.
 - Reusable messaging traits to plug in custom producers, processors, or destinations.
@@ -13,8 +13,8 @@ Tickflow is an async-first data pipeline for streaming market data into downstre
 
 1. Install Rust (edition 2024 or newer) via [rustup](https://rustup.rs/).
 2. Ensure you have PostgreSQL running and reachable.
-3. Collect Alpaca Market Data credentials (key, secret, websocket URL).
-4. Clone the repository and enable the default feature set (`alpaca`, `postgres`):
+3. For Alpaca: collect API credentials (key, secret, websocket URL). For Yahoo: no credentials needed.
+4. Clone the repository and enable the default feature set (`alpaca`, `postgres`, `yahoo`):
 
 ```bash
 git clone https://github.com/your-org/tickflow-rs.git
@@ -49,15 +49,18 @@ The `tickflow` binary wires the Alpaca websocket to PostgreSQL and initializes t
 cargo run --release --bin tickflow
 ```
 
-### Run the example pipeline
+### Run the example pipelines
 
-**Note:** You will need to provide your own Alpaca API keys (`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`) in your environment or `.env` file to access Alpaca's data streams.
-
-
-The example demonstrates the full flow and is guarded by the `alpaca` and `postgres` feature flags:
+**Alpaca example:** Requires API keys (`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`) in your environment or `.env` file:
 
 ```bash
 cargo run --release --example alpaca_to_postgres --features "alpaca postgres"
+```
+
+**Yahoo Finance example:** No credentials needed:
+
+```bash
+cargo run --release --example yahoo_to_postgres --features "yahoo postgres"
 ```
 
 ### Embed Tickflow in your own project
@@ -66,9 +69,9 @@ Re-use the builder and message traits to compose custom pipelines or reuse the p
 
 ```rust
 use tickflow::config::AppConfig;
-use tickflow::connectors::alpaca::AlpacaWebSocketClient;
+use tickflow::connectors::alpaca::websocket::AlpacaWebSocketClient;
 use tickflow::prelude::*;
-use tickflow::storage::Database;
+use tickflow::storage::{Database, postgres_handler::alpaca::AlpacaMessageHandler};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -76,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     let config = AppConfig::from_env()?;
-    let database = Database::connect(&config.database_url).await?;
+    let database = Database::connect(&config.database_url, AlpacaMessageHandler).await?;
     database.initialize_schema().await?;
 
     let websocket = AlpacaWebSocketClient::new(
