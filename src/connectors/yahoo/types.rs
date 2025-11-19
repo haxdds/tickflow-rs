@@ -1,10 +1,10 @@
 use crate::core::Message;
+use chrono::NaiveDateTime;
 use serde::Deserialize;
 use yfinance_rs::fundamentals::{
-    BalanceSheetRow as YBalanceSheetRow, Calendar, CashflowRow as YCashflowRow,
+    BalanceSheetRow as YBalanceSheetRow, CashflowRow as YCashflowRow,
     IncomeStatementRow as YIncomeStatementRow,
 };
-
 /// Wraps an IncomeStatementRow with a symbol field.
 #[derive(Deserialize, Clone, Debug)]
 pub struct IncomeStatementRow {
@@ -31,15 +31,25 @@ pub struct CashflowRow {
 
 /// Wraps a Calendar with a symbol field.
 #[derive(Deserialize, Clone, Debug)]
-pub struct CalendarRow {
+pub struct CalendarEntry {
     pub symbol: String,
-    #[serde(flatten)]
-    pub inner: Calendar,
+    pub date_type: CalendarDateType,
+    pub date: NaiveDateTime,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub enum CalendarDateType {
+    #[serde(rename = "earnings")]
+    Earnings,
+    #[serde(rename = "ex_dividend")]
+    ExDividend,
+    #[serde(rename = "dividend_payment")]
+    DividendPayment,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub enum YahooMessage {
-    Calendar(CalendarRow),
+    Calendar(CalendarEntry),
     IncomeStatement(IncomeStatementRow),
     BalanceSheet(BalanceSheetRow),
     Cashflow(CashflowRow),

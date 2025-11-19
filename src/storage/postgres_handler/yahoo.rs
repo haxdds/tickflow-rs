@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::connectors::yahoo::types::YahooMessage;
+use crate::connectors::yahoo::types::{CalendarDateType, YahooMessage};
 use crate::storage::postgres::DatabaseMessageHandler;
 use anyhow::Result;
 use paft_domain::period::Period;
@@ -74,6 +74,20 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                 )
                 .await?;
 
+            client
+                .execute(
+                    "CREATE TABLE IF NOT EXISTS calendar_dates (
+                        id SERIAL PRIMARY KEY,
+                        symbol VARCHAR(10) NOT NULL,
+                        date_type VARCHAR(24) NOT NULL CHECK (date_type IN ('earnings', 'ex_dividend', 'dividend_payment')),
+                        date_utc TIMESTAMP NOT NULL,                     
+                        received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(symbol, date_type, date_utc)
+                    )",
+                    &[],
+                )
+                .await?;
+
             Ok(())
         })
     }
@@ -96,7 +110,7 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
                         Self::insert_cashflow(&client, row).await;
                     }
                     YahooMessage::Calendar(_cal) => {
-                        // Calendar is not handled for now.
+                        Self::insert_calendar(&client, _cal).await;
                     }
                 }
             }
@@ -277,6 +291,36 @@ impl YahooMessageHandler {
                 "Failed to insert cashflow for {} ({}): {}",
                 row.symbol,
                 period_date,
+                e
+            );
+        }
+    }
+
+    async fn insert_calendar(
+        client: &Client,
+        calendar_entry: crate::connectors::yahoo::types::CalendarEntry,
+    ) {
+        eprintln!("!CALENDAR: {:?}", calendar_entry);
+        // (date_type IN ('earnings', 'ex_dividend', 'dividend_payment')),
+        // Convert enum to string for PostgreSQL
+        let date_type_str = match calendar_entry.date_type {
+            CalendarDateType::Earnings => "earnings",
+            CalendarDateType::ExDividend => "ex_dividend",
+            CalendarDateType::DividendPayment => "dividend_payment",
+        };
+
+        if let Err(e) = client
+            .execute(
+                "INSERT INTO calendar_dates (symbol, date_type, date_utc)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (symbol, date_type, date_utc) DO NOTHING",
+                &[&calendar_entry.symbol, &date_type_str, &calendar_entry.date],
+            )
+            .await
+        {
+            tracing::error!(
+                "Failed to insert earnings date for {}: {}",
+                &calendar_entry.symbol,
                 e
             );
         }
