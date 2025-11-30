@@ -5,9 +5,9 @@ use crate::{
 };
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tokio::time::{Duration, sleep};
+use std::sync::Arc;
+use tokio::time::{sleep, Duration};
 use tracing::debug;
 use yfinance_rs::{Ticker, YfClient};
 
@@ -70,17 +70,46 @@ impl ProxyYahooClient {
         symbol: &str,
         tx: tokio::sync::mpsc::Sender<MessageBatch<YahooMessage>>,
     ) -> anyhow::Result<()> {
-        self.fetch_income_statement(symbol, tx.clone()).await?;
+        if let Err(e) = self.fetch_income_statement(symbol, tx.clone()).await {
+            tracing::warn!(
+                symbol = %symbol,
+                statement_type = "income_statement",
+                error = %e,
+                "Failed to fetch financial data"
+            );
+        }
         sleep(Duration::from_millis(self.timeout_ms)).await;
 
-        self.fetch_balance_sheet(symbol, tx.clone()).await?;
+        if let Err(e) = self.fetch_balance_sheet(symbol, tx.clone()).await {
+            tracing::warn!(
+                symbol = %symbol,
+                statement_type = "balance_sheet",
+                error = %e,
+                "Failed to fetch financial data"
+            );
+        }
         sleep(Duration::from_millis(self.timeout_ms)).await;
 
-        self.fetch_cashflow(symbol, tx.clone()).await?;
+        if let Err(e) = self.fetch_cashflow(symbol, tx.clone()).await {
+            tracing::warn!(
+                symbol = %symbol,
+                statement_type = "cashflow",
+                error = %e,
+                "Failed to fetch financial data"
+            );
+        }
         sleep(Duration::from_millis(self.timeout_ms)).await;
 
-        self.fetch_calendars(symbol, tx.clone()).await?;
+        if let Err(e) = self.fetch_calendars(symbol, tx.clone()).await {
+            tracing::warn!(
+                symbol = %symbol,
+                statement_type = "calendars",
+                error = %e,
+                "Failed to fetch financial data"
+            );
+        }
         sleep(Duration::from_millis(self.timeout_ms)).await;
+
         Ok(())
     }
 
