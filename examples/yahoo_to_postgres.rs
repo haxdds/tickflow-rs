@@ -3,7 +3,7 @@
 async fn main() -> anyhow::Result<()> {
     use tickflow::{
         config::AppConfig,
-        connectors::yahoo::YahooClient,
+        connectors::yahoo::ProxyYahooClient,
         pipeline::TickflowBuilder,
         storage::{Database, postgres_handler::yahoo::YahooMessageHandler},
     };
@@ -24,8 +24,14 @@ async fn main() -> anyhow::Result<()> {
 
     // Configure data source
     let symbols = ["PLTR", "AAPL"].iter().map(|s| s.to_string()).collect();
-    let batch_size = 1000;
-    let source = YahooClient::new(symbols, batch_size);
+    let proxies = [
+        "r2VGXNT8iGmOeYi:ofOwRXeEm9pQgO7@212.32.123.187:43160",
+        "AvtZPuXpe7yV7xA:k3toqiMZudQeXS7@207.135.202.204:46128",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    let source = ProxyYahooClient::new(proxies, symbols, 2000_u64)?;
 
     // Start the data pipeline
     let handles = TickflowBuilder::new(source, database)
