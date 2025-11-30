@@ -5,9 +5,9 @@ use crate::{
 };
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use tokio::time::{sleep, Duration};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use tokio::time::{Duration, sleep};
 use tracing::debug;
 use yfinance_rs::{Ticker, YfClient};
 
