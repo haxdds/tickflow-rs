@@ -101,15 +101,35 @@ impl DatabaseMessageHandler<YahooMessage> for YahooMessageHandler {
             for message in batch {
                 match message {
                     YahooMessage::IncomeStatement(row) => {
+                        tracing::info!(
+                            symbol = %row.symbol,
+                            data_type = "income_statement",
+                            "Inserting financial data"
+                        );
                         Self::insert_income_statement(&client, row).await;
                     }
                     YahooMessage::BalanceSheet(row) => {
+                        tracing::info!(
+                            symbol = %row.symbol,
+                            data_type = "balance_sheet",
+                            "Inserting financial data"
+                        );
                         Self::insert_balance_sheet(&client, row).await;
                     }
                     YahooMessage::Cashflow(row) => {
+                        tracing::info!(
+                            symbol = %row.symbol,
+                            data_type = "cashflow",
+                            "Inserting financial data"
+                        );
                         Self::insert_cashflow(&client, row).await;
                     }
                     YahooMessage::Calendar(_cal) => {
+                        tracing::info!(
+                            symbol = %_cal.symbol,
+                            data_type = "calendar",
+                            "Inserting financial data"
+                        );
                         Self::insert_calendar(&client, _cal).await;
                     }
                 }
@@ -300,7 +320,6 @@ impl YahooMessageHandler {
         client: &Client,
         calendar_entry: crate::connectors::yahoo::types::CalendarEntry,
     ) {
-        eprintln!("!CALENDAR: {:?}", calendar_entry);
         // (date_type IN ('earnings', 'ex_dividend', 'dividend_payment')),
         // Convert enum to string for PostgreSQL
         let date_type_str = match calendar_entry.date_type {
