@@ -6,13 +6,14 @@ use crate::{
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tokio::time::{Duration, sleep};
+use std::sync::Arc;
+use tokio::time::{sleep, Duration};
 use tracing::debug;
 use yfinance_rs::{Ticker, YfClient};
 
 pub struct ProxyYahooClient {
     clients: Vec<YfClient>,
-    counter: AtomicUsize,
+    counter: Arc<AtomicUsize>,
     symbols: Vec<String>,
     timeout_ms: u64,
 }
@@ -33,7 +34,11 @@ impl MessageSource<YahooMessage> for ProxyYahooClient {
 }
 
 impl ProxyYahooClient {
-    pub fn new(proxies: Vec<String>, symbols: Vec<String>, timeout_ms: u64) -> anyhow::Result<Self> {
+    pub fn new(
+        proxies: Vec<String>,
+        symbols: Vec<String>,
+        timeout_ms: u64,
+    ) -> anyhow::Result<Self> {
         let mut clients = Vec::with_capacity(proxies.len() + 1);
 
         // Create default client without proxy
@@ -41,16 +46,15 @@ impl ProxyYahooClient {
 
         // Create clients with proxies
         for proxy in proxies {
-            let client = YfClient::builder()
-                .proxy(&proxy)
-                .build()
-                .map_err(|e| anyhow::anyhow!("Failed to create client with proxy {}: {}", proxy, e))?;
+            let client = YfClient::builder().proxy(&proxy).build().map_err(|e| {
+                anyhow::anyhow!("Failed to create client with proxy {}: {}", proxy, e)
+            })?;
             clients.push(client);
         }
 
         Ok(Self {
             clients,
-            counter: AtomicUsize::new(0),
+            counter: Arc::new(AtomicUsize::new(0)),
             symbols,
             timeout_ms,
         })
