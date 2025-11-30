@@ -4,9 +4,8 @@ async fn main() -> anyhow::Result<()> {
     use tickflow::{
         config::AppConfig,
         connectors::yahoo::ProxyYahooClient,
-        connectors::yahoo::YahooClient,
         pipeline::TickflowBuilder,
-        storage::{postgres_handler::yahoo::YahooMessageHandler, Database},
+        storage::{Database, postgres_handler::yahoo::YahooMessageHandler},
     };
     use tracing::Level;
 
@@ -25,7 +24,6 @@ async fn main() -> anyhow::Result<()> {
 
     // Configure data source
     let symbols = ["PLTR", "AAPL"].iter().map(|s| s.to_string()).collect();
-    let batch_size = 1000;
     let proxies = [
         "r2VGXNT8iGmOeYi:ofOwRXeEm9pQgO7@212.32.123.187:43160",
         "AvtZPuXpe7yV7xA:k3toqiMZudQeXS7@207.135.202.204:46128",
