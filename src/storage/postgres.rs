@@ -81,7 +81,9 @@ impl<M: Message> MessageSink<M> for Database<M> {
 }
 
 // Re-export message handlers
-#[cfg(feature = "postgres")]
+#[cfg(all(feature = "postgres", feature = "alpaca"))]
 pub use crate::storage::postgres_handler::alpaca::AlpacaMessageHandler;
-#[cfg(feature = "postgres")]
+#[cfg(all(feature = "postgres", feature = "yahoo"))]
 pub use crate::storage::postgres_handler::yahoo::YahooMessageHandler;
+#[cfg(all(feature = "postgres", feature = "polymarket"))]
+pub use crate::storage::postgres_handler::polymarket::PolymarketMessageHandler;
