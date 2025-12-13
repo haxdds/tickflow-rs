@@ -10,6 +10,7 @@ pub struct AppConfig {
     pub alpaca_ws_url: String,
     pub channel_capacity: usize,
     pub symbols_path: String,
+    pub polymarket_private_key: String,
 }
 
 impl AppConfig {
@@ -48,6 +49,11 @@ impl AppConfig {
             Err(_) => return Err(anyhow!("SYMBOLS_PATH must be set")),
         };
 
+        let polymarket_private_key = match env::var("PK") {
+            Ok(val) => val,
+            Err(_) => return Err(anyhow!("PK must be set for Polymarket authentication")),
+        };
+
         Ok(Self {
             database_url,
             alpaca_api_key,
@@ -55,6 +61,7 @@ impl AppConfig {
             alpaca_ws_url,
             channel_capacity,
             symbols_path,
+            polymarket_private_key,
         })
     }
 }

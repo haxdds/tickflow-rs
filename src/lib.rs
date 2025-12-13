@@ -5,7 +5,7 @@ pub mod core;
 pub mod pipeline;
 pub mod prelude;
 
-#[cfg(feature = "alpaca")]
+#[cfg(any(feature = "alpaca", feature = "yahoo", feature = "polymarket"))]
 pub mod connectors;
 
 #[cfg(feature = "postgres")]
