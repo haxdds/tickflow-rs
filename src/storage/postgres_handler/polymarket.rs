@@ -193,4 +193,3 @@ async fn insert_market(client: &Client, market: Market) -> Result<(), tokio_post
 
     Ok(())
 }
-

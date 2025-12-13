@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
         config::AppConfig,
         connectors::polymarket::PolymarketClient,
         pipeline::TickflowBuilder,
-        storage::{postgres_handler::polymarket::PolymarketMessageHandler, Database},
+        storage::{Database, postgres_handler::polymarket::PolymarketMessageHandler},
     };
     use tracing::Level;
 
@@ -53,4 +53,3 @@ async fn main() -> anyhow::Result<()> {
 fn main() {
     panic!("Enable the `polymarket` and `postgres` features to run this example.");
 }
-

@@ -141,4 +141,3 @@ impl MessageSource<PolymarketMessage> for PolymarketClient {
         Box::pin(async move { self.fetch_all_markets(tx).await })
     }
 }
-

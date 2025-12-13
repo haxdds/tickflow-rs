@@ -5,4 +5,3 @@ pub mod types;
 
 pub use client::PolymarketClient;
 pub use types::{Market, PolymarketMessage};
-
