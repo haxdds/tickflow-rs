@@ -3,5 +3,5 @@
 pub mod client;
 pub mod types;
 
-pub use client::PolymarketClient;
-pub use types::{Market, PolymarketMessage};
+pub use client::{PolymarketClient, PolymarketGammaClient};
+pub use types::{Market, MarketGamma, PolymarketMessage};

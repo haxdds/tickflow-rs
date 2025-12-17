@@ -3887,6 +3887,7 @@ dependencies = [
  "paft-domain 0.7.1",
  "paft-money 0.7.1",
  "polymarket-rs-client",
+ "reqwest",
  "rust_decimal",
  "serde",
  "serde_json",
