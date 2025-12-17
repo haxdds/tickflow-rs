@@ -18,7 +18,7 @@ postgres = [
     "serde_json",
 ]
 yahoo = ["yfinance-rs"]
-polymarket = ["polymarket-rs-client", "serde_json", "chrono"]
+polymarket = ["polymarket-rs-client", "serde_json", "chrono", "reqwest"]
 
 [dependencies]
 # Async runtime
@@ -56,6 +56,9 @@ yfinance-rs = { version = "0.7.2", optional = true }
 
 # Polymarket CLOB client; used in the polymarket feature
 polymarket-rs-client = { version = "0.1", optional = true }
+
+# HTTP client for API requests
+reqwest = { version = "0.12", features = ["json"], optional = true }
 
 # Arbitrary-precision decimal math for currency computation
 rust_decimal = "1.39.0"

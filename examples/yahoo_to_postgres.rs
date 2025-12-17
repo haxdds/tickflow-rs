@@ -4,15 +4,14 @@ async fn main() -> anyhow::Result<()> {
     use tickflow::{
         config::AppConfig,
         connectors::yahoo::ProxyYahooClient,
+        connectors::yahoo::symbols::load_symbols,
         pipeline::TickflowBuilder,
         storage::{Database, postgres_handler::yahoo::YahooMessageHandler},
     };
     use tracing::Level;
 
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     // Load environment variables
     dotenvy::dotenv().ok();
@@ -23,7 +22,9 @@ async fn main() -> anyhow::Result<()> {
     database.initialize_schema().await?;
 
     // Configure data source
-    let symbols = ["PLTR", "AAPL"].iter().map(|s| s.to_string()).collect();
+    // let symbols = ["PLTR", "AAPL"].iter().map(|s| s.to_string()).collect();
+    let mut symbols = load_symbols(config.symbols_path.clone()).await?;
+    symbols = symbols[2810..].to_vec();
     let proxies = [
         "r2VGXNT8iGmOeYi:ofOwRXeEm9pQgO7@212.32.123.187:43160",
         "AvtZPuXpe7yV7xA:k3toqiMZudQeXS7@207.135.202.204:46128",

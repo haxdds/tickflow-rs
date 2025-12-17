@@ -1,9 +1,16 @@
+//! Example: Fetch active markets from Polymarket Gamma API and store in PostgreSQL.
+//!
+//! This example demonstrates:
+//! - Fetching active markets from the Gamma API endpoint
+//! - Using TickflowBuilder to create a data pipeline
+//! - Storing them in PostgreSQL using the market_gamma table
+
 #[cfg(all(feature = "polymarket", feature = "postgres"))]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use tickflow::{
         config::AppConfig,
-        connectors::polymarket::PolymarketClient,
+        connectors::polymarket::PolymarketGammaClient,
         pipeline::TickflowBuilder,
         storage::{Database, postgres_handler::polymarket::PolymarketMessageHandler},
     };
@@ -20,9 +27,10 @@ async fn main() -> anyhow::Result<()> {
     let database = Database::connect(&config.database_url, PolymarketMessageHandler).await?;
     database.initialize_schema().await?;
 
-    // Configure Polymarket data source
-    // Request delay of 100ms between paginated requests
-    let source = PolymarketClient::new(config.polymarket_private_key, 100);
+    // Configure Polymarket Gamma API data source
+    // Request delay of 200ms between paginated requests
+    // Fetch markets ending on or after Dec 13, 2025
+    let source = PolymarketGammaClient::new(200, "2025-12-13".to_string());
 
     // Start the data pipeline
     let handles = TickflowBuilder::new(source, database)
